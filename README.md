@@ -20,7 +20,7 @@
 
 | Integrante | Rol | Contacto |
 | :--- | :--- | :--- |
-| **Haziel Ruiz Zúñiga** | Scrum Master / Product Owner & Analista | `l221213339@morelia.tecnm.mx` |
+| **Haziel Ruiz Zúñiga** | Scrum Master  & Analista | `l221213339@morelia.tecnm.mx` |
 | **José Rodrigo Vargas Carrillo** | Tech Lead & Arquitecto de Software | `l23121118@morelia.tecnm.mx` |
 | **Miguel Ángel Cristal Bolaños** | DevOps & QA Engineer | `l23121135@morelia.tecnm.mx` |
 | **Julio Armando Martínez Equihua** | Computer Vision & Backend Developer | `l23121112@morelia.tecnm.mx` |
