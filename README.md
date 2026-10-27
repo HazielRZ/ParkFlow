@@ -1,6 +1,7 @@
 # PARK FLOW 🚗🅿️
 > **Sistema Inteligente de Monitoreo y Gestión de Estacionamiento por Visión Computacional**  
 > *Instituto Tecnológico de Morelia — Ingeniería en Sistemas Computacionales*
+> [[https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-blue.svg]](LICENSE)
 
 [[https://img.shields.io/badge/license-MIT-blue.svg]](LICENSE)
 [[https://img.shields.io/badge/Python-3.10%2B-blue?logo=python]](https://python.org)
