@@ -1,0 +1,139 @@
+openapi: 3.0.3
+info:
+  title: ParkFlow CV to Backend Ingestion API
+  version: 1.0.0
+  description: Endpoint de ingestión para estados de cajones de estacionamiento (INT-SW-01).
+  license:
+    name: PolyForm Noncommercial License 1.0.0
+    url: https://polyformproject.org/licenses/noncommercial/1.0.0/
+paths:
+  /api/v1/inference/states:
+    post:
+      summary: Recibir actualización de estados por polígono
+      operationId: ingestPolygonStates
+      tags:
+        - Inference
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InferencePayload'
+      responses:
+        '202':
+          description: Evento de inferencia recibido y encolado para broadcast.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - received_at
+                properties:
+                  status:
+                    type: string
+                    example: accepted
+                  received_at:
+                    type: string
+                    format: date-time
+        '400':
+          description: Carga útil inválida o incompatibilidad de contrato JSON.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Estado no soportado en la máquina de estados o violación semántica del esquema.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    InferencePayload:
+      type: object
+      additionalProperties: false
+      required:
+        - camera_id
+        - parking_lot_id
+        - timestamp
+        - frame_sequence
+        - polygons
+      properties:
+        camera_id:
+          type: string
+          format: uuid
+          example: "e6f4776b-3122-4a0b-857e-3c22db92dcb1"
+        parking_lot_id:
+          type: string
+          minLength: 1
+          example: "ITM-CAMPUS1-EST-NORTE"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-10-27T18:30:00Z"
+        frame_sequence:
+          type: integer
+          minimum: 0
+          example: 1042
+        polygons:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/PolygonState'
+    PolygonState:
+      type: object
+      additionalProperties: false
+      required:
+        - polygon_id
+        - slot_name
+        - state
+        - confidence
+        - iou_ratio
+      properties:
+        polygon_id:
+          type: string
+          minLength: 1
+          example: "poly-itm-001"
+        slot_name:
+          type: string
+          minLength: 1
+          example: "C-01"
+        state:
+          type: string
+          enum:
+            - Libre
+            - Ocupado
+            - En maniobra
+          example: "En maniobra"
+        confidence:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.89
+        iou_ratio:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.38
+        vehicle_type:
+          type: string
+          nullable: true
+          enum:
+            - car
+            - truck
+            - motorcycle
+            - bus
+          example: "car"
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - detail
+      properties:
+        error:
+          type: string
+          example: "ContractValidationError"
+        detail:
+          type: string
+          example: "'InvalidState' is not one of ['Libre', 'Ocupado', 'En maniobra']"

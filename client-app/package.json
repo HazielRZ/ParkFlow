@@ -1,0 +1,22 @@
+{
+  "name": "@parkflow/client-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Capa 3: Dashboard y Aplicación Cliente de Monitoreo de Estacionamiento en Tiempo Real (RNF-05)",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "author": "Haziel Ruiz Zúñiga <l221213339@morelia.tecnm.mx>",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5173",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 5173"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.0"
+  }
+}

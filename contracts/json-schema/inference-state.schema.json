@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://parkflow.tecnm.mx/schemas/inference-state.schema.json",
+  "title": "ParkFlowPolygonInferencePayload",
+  "description": "Contrato de intercambio para la inferencia de estados de polígonos (INT-SW-01).",
+  "type": "object",
+  "required": [
+    "camera_id",
+    "parking_lot_id",
+    "timestamp",
+    "frame_sequence",
+    "polygons"
+  ],
+  "properties": {
+    "camera_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Identificador único de la cámara emisora."
+    },
+    "parking_lot_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Clave del área o estacionamiento monitoreado."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Estampa de tiempo ISO-8601 del frame procesado."
+    },
+    "frame_sequence": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Número de secuencia incremental del frame."
+    },
+    "polygons": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "polygon_id",
+          "slot_name",
+          "state",
+          "confidence",
+          "iou_ratio"
+        ],
+        "properties": {
+          "polygon_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Identificador unívoco del polígono del cajón."
+          },
+          "slot_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Etiqueta visual del cajón (ej. A-01, B-14)."
+          },
+          "state": {
+            "type": "string",
+            "enum": ["Libre", "Ocupado", "En maniobra"],
+            "description": "Estado calculado tras filtro temporal."
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "Nivel de confianza de la detección vehicular."
+          },
+          "iou_ratio": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "Grado de intersección sobre unión con el cajón."
+          },
+          "vehicle_type": {
+            "type": ["string", "null"],
+            "enum": ["car", "truck", "motorcycle", "bus", null],
+            "description": "Clase vehicular detectada por el modelo."
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

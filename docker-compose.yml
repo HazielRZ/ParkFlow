@@ -1,0 +1,57 @@
+# ParkFlow — Orquestación de Desarrollo Local (RNF-05 & INT-SW-01)
+# Licencia: PolyForm Noncommercial License 1.0.0
+
+services:
+  api-backend:
+    build:
+      context: ./api-backend
+      dockerfile: Dockerfile
+    container_name: parkflow-api-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PARKFLOW_INFERENCE_SCHEMA_PATH=/contracts/json-schema/inference-state.schema.json
+    volumes:
+      - ./contracts:/contracts:ro
+    networks:
+      - cv-ingestion-net
+      - client-realtime-net
+    restart: unless-stopped
+
+  cv-service:
+    build:
+      context: ./cv-service
+      dockerfile: Dockerfile
+    container_name: parkflow-cv-service
+    depends_on:
+      - api-backend
+    environment:
+      - PARKFLOW_BACKEND_URL=http://api-backend:8000
+      - PARKFLOW_INFERENCE_SCHEMA_PATH=/contracts/json-schema/inference-state.schema.json
+    volumes:
+      - ./contracts:/contracts:ro
+    networks:
+      - cv-ingestion-net
+    restart: unless-stopped
+
+  client-app:
+    build:
+      context: ./client-app
+      dockerfile: Dockerfile
+    container_name: parkflow-client-app
+    depends_on:
+      - api-backend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_BACKEND_WS_URL=ws://localhost:8000/ws/parking-states
+    networks:
+      - client-realtime-net
+    restart: unless-stopped
+
+networks:
+  cv-ingestion-net:
+    driver: bridge
+    internal: true
+  client-realtime-net:
+    driver: bridge
