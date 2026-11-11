@@ -8,6 +8,9 @@ from typing import Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.api.access_routes import build_access_router
+from src.api.auth_routes import build_auth_router
+from src.api.calibration_routes import build_calibration_router
 from src.api.inference_routes import build_inference_router
 from src.services.parking_state_service import ParkingStateService
 from src.validators.schema_validator import InferenceSchemaValidator
@@ -19,7 +22,10 @@ def create_app(schema_path: Optional[Path] = None) -> FastAPI:
     app = FastAPI(
         title="ParkFlow CV to Backend Ingestion API",
         version="1.0.0",
-        description="Orquestador de negocio y validación de estados de estacionamiento (RNF-05 / INT-SW-01).",
+        description=(
+            "Orquestador de negocio, validación de estados de estacionamiento y "
+            "autenticación institucional con RBAC (RNF-05 / INT-SW-01 / RNF-02)."
+        ),
         license_info={
             "name": "PolyForm Noncommercial License 1.0.0",
             "url": "https://polyformproject.org/licenses/noncommercial/1.0.0/",
@@ -41,6 +47,9 @@ def create_app(schema_path: Optional[Path] = None) -> FastAPI:
     app.include_router(
         build_inference_router(validator=validator, state_service=state_service)
     )
+    app.include_router(build_auth_router())
+    app.include_router(build_calibration_router())
+    app.include_router(build_access_router())
 
     @app.get("/health", tags=["System"])
     async def health_check() -> dict[str, str]:

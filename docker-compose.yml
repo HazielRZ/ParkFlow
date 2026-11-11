@@ -11,6 +11,10 @@ services:
       - "8000:8000"
     environment:
       - PARKFLOW_INFERENCE_SCHEMA_PATH=/contracts/json-schema/inference-state.schema.json
+      # RNF-02: sobreescribir en despliegue real, nunca usar el valor dummy en producción.
+      - PARKFLOW_JWT_SECRET_KEY=parkflow-itm-dummy-secret-key-CAMBIAR-EN-PRODUCCION
+      - PARKFLOW_JWT_ALGORITHM=HS256
+      - PARKFLOW_JWT_EXPIRE_MINUTES=60
     volumes:
       - ./contracts:/contracts:ro
     networks:
