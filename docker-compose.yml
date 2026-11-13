@@ -2,6 +2,26 @@
 # Licencia: PolyForm Noncommercial License 1.0.0
 
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: parkflow-db
+    environment:
+      POSTGRES_DB: parkflow
+      POSTGRES_USER: parkflow
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en el archivo .env}
+    volumes:
+      - parkflow-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parkflow -d parkflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5433:5432"   # Solo desarrollo: quitar este mapeo en un despliegue real.
+    networks:
+      - db-net
+    restart: unless-stopped
+
   api-backend:
     build:
       context: ./api-backend
@@ -9,17 +29,21 @@ services:
     container_name: parkflow-api-backend
     ports:
       - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
       - PARKFLOW_INFERENCE_SCHEMA_PATH=/contracts/json-schema/inference-state.schema.json
-      # RNF-02: sobreescribir en despliegue real, nunca usar el valor dummy en producción.
       - PARKFLOW_JWT_SECRET_KEY=parkflow-itm-dummy-secret-key-CAMBIAR-EN-PRODUCCION
       - PARKFLOW_JWT_ALGORITHM=HS256
       - PARKFLOW_JWT_EXPIRE_MINUTES=60
+      - PARKFLOW_DATABASE_URL=postgresql+psycopg://parkflow:${POSTGRES_PASSWORD}@db:5432/parkflow
     volumes:
       - ./contracts:/contracts:ro
     networks:
       - cv-ingestion-net
       - client-realtime-net
+      - db-net
     restart: unless-stopped
 
   cv-service:
@@ -53,9 +77,14 @@ services:
       - client-realtime-net
     restart: unless-stopped
 
+volumes:
+  parkflow-pgdata:
+
 networks:
   cv-ingestion-net:
     driver: bridge
     internal: true
   client-realtime-net:
+    driver: bridge
+  db-net:
     driver: bridge
