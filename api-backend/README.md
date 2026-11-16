@@ -64,6 +64,8 @@ Login con `POST /api/auth/login`, restringido a correos `@morelia.tecnm.mx`. Los
 | Evento | `accion` | `id_usuario` |
 | :--- | :--- | :--- |
 | Login exitoso | `LOGIN_EXITOSO` | Usuario que inició sesión |
+| Login fallido (`401`) | `LOGIN_FALLIDO:correo=<correo>` | La cuenta, si el correo existe (contraseña incorrecta); vacío si no existe |
+| Login con correo no institucional (`422`) | `LOGIN_RECHAZADO_DOMINIO:correo=<correo>` | Vacío |
 | Acceso permitido a endpoint protegido | `CALIBRACION_CAJON:...` / `REGISTRO_MANUAL_ACCESO:...` | Usuario autenticado |
 | Rechazo RBAC (`403`) | `ACCESO_DENEGADO:rol=<rol>` | Usuario autenticado |
 | Cambio de estado de un cajón | `CAMBIO_ESTADO_CAJON:lote=...,poligono=...,cajon=...,anterior=<estado>,nuevo=<estado>` | Vacío (evento del sistema, lo reporta `/cv-service`) |

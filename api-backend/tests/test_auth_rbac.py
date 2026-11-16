@@ -41,12 +41,30 @@ def _auth_header(client: TestClient, credenciales: dict) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_login_rechaza_correo_no_institucional() -> None:
+def test_login_rechaza_correo_no_institucional_y_lo_audita() -> None:
     client = TestClient(create_app())
+    total_logs_previos = len(auditoria_service.registros)
+
     respuesta = client.post(
         "/api/auth/login", json={"correo": "hacker@gmail.com", "password": "x"}
     )
+
     assert respuesta.status_code == 422
+    assert respuesta.json()["detail"][0]["type"] == "dominio_no_institucional"
+    assert len(auditoria_service.registros) == total_logs_previos + 1
+    registro = auditoria_service.registros[-1]
+    assert registro.accion == "LOGIN_RECHAZADO_DOMINIO:correo=hacker@gmail.com"
+    assert registro.id_usuario is None
+
+
+def test_login_con_correo_mal_formado_no_se_audita_como_rechazo_de_dominio() -> None:
+    client = TestClient(create_app())
+    total_logs_previos = len(auditoria_service.registros)
+
+    respuesta = client.post("/api/auth/login", json={"correo": "no-es-un-correo", "password": "x"})
+
+    assert respuesta.status_code == 422
+    assert len(auditoria_service.registros) == total_logs_previos
 
 
 def test_login_exitoso_retorna_jwt_y_registra_auditoria() -> None:
@@ -63,13 +81,37 @@ def test_login_exitoso_retorna_jwt_y_registra_auditoria() -> None:
     assert auditoria_service.registros[-1].accion == "LOGIN_EXITOSO"
 
 
-def test_login_credenciales_incorrectas_retorna_401() -> None:
+def test_login_password_incorrecto_retorna_401_y_audita_la_cuenta() -> None:
     client = TestClient(create_app())
+    total_logs_previos = len(auditoria_service.registros)
+
     respuesta = client.post(
         "/api/auth/login",
         json={"correo": "admin@morelia.tecnm.mx", "password": "incorrecta"},
     )
+
     assert respuesta.status_code == 401
+    assert len(auditoria_service.registros) == total_logs_previos + 1
+    registro = auditoria_service.registros[-1]
+    assert registro.accion == "LOGIN_FALLIDO:correo=admin@morelia.tecnm.mx"
+    assert registro.id_usuario == 1
+
+
+def test_login_correo_no_registrado_retorna_401_y_audita_sin_usuario() -> None:
+    client = TestClient(create_app())
+    total_logs_previos = len(auditoria_service.registros)
+
+    respuesta = client.post(
+        "/api/auth/login",
+        json={"correo": "noexiste@morelia.tecnm.mx", "password": "x"},
+    )
+
+    assert respuesta.status_code == 401
+    assert respuesta.json()["detail"] == "Correo o contraseña incorrectos"
+    assert len(auditoria_service.registros) == total_logs_previos + 1
+    registro = auditoria_service.registros[-1]
+    assert registro.accion == "LOGIN_FALLIDO:correo=noexiste@morelia.tecnm.mx"
+    assert registro.id_usuario is None
 
 
 @pytest.mark.parametrize("rol", list(RolEnum), ids=lambda rol: rol.name)
