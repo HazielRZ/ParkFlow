@@ -21,3 +21,19 @@ class ParkingSlotRecord:
     camera_id: str
     frame_sequence: int
     updated_at: datetime
+
+
+@dataclass
+class CalibracionCajonRecord:
+    """Umbrales de IoU de un cajón para la máquina de estados (AGENTS.md §5.1).
+
+    IoU < `umbral_iou_libre` → `Libre`; IoU ≥ `umbral_iou_ocupado` → `Ocupado`;
+    en medio → `En maniobra`.
+    """
+
+    parking_lot_id: str
+    polygon_id: str
+    umbral_iou_libre: float
+    umbral_iou_ocupado: float
+    actualizado_por: int
+    actualizado_en: datetime

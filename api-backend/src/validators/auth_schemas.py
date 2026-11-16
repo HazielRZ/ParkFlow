@@ -47,13 +47,3 @@ class UsuarioOut(BaseModel):
     id_usuario: int
     correo: EmailStr
     rol: RolEnum
-
-
-class CalibracionCajonesRequest(BaseModel):
-    id_cajon: int
-    umbral_ocupado_cm: float
-
-
-class AccesoManualRequest(BaseModel):
-    placa: str
-    id_cajon: int

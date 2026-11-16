@@ -18,9 +18,18 @@ CREDENCIALES_POR_ROL = {
     RolEnum.INVITADO: {"correo": "invitado@morelia.tecnm.mx", "password": "Invitado123*"},
 }
 
+LOTE = "ITM-CAMPUS1-EST-NORTE"
+POLIGONO = "poly-itm-001"
+
 ENDPOINTS_PROTEGIDOS = {
-    "calibracion": ("/api/calibracion/cajones", {"id_cajon": 5, "umbral_ocupado_cm": 12.5}),
-    "registro_manual": ("/api/accesos/registro-manual", {"placa": "ABC-123", "id_cajon": 3}),
+    "calibracion": (
+        "/api/calibracion/cajones",
+        {"parking_lot_id": LOTE, "polygon_id": POLIGONO, "umbral_iou_libre": 0.2, "umbral_iou_ocupado": 0.5},
+    ),
+    "registro_manual": (
+        "/api/accesos/registro-manual",
+        {"parking_lot_id": LOTE, "polygon_id": POLIGONO, "placa": "ABC-123", "estado": "Ocupado"},
+    ),
 }
 
 # Matriz de permisos esperada (mínimo privilegio). Se escribe a mano a propósito,
@@ -32,6 +41,30 @@ ROLES_PERMITIDOS = {
 }
 
 CASOS_MATRIZ = [(endpoint, rol) for endpoint in ENDPOINTS_PROTEGIDOS for rol in RolEnum]
+
+
+def _registrar_cajon(client: TestClient) -> None:
+    """Da de alta el cajón de prueba vía inferencia (los endpoints responden 404 si no existe)."""
+    respuesta = client.post(
+        "/api/v1/inference/states",
+        json={
+            "camera_id": "e6f4776b-3122-4a0b-857e-3c22db92dcb1",
+            "parking_lot_id": LOTE,
+            "timestamp": "2026-10-27T18:30:00Z",
+            "frame_sequence": 1,
+            "polygons": [
+                {
+                    "polygon_id": POLIGONO,
+                    "slot_name": "C-01",
+                    "state": "Libre",
+                    "confidence": 0.9,
+                    "iou_ratio": 0.05,
+                    "vehicle_type": None,
+                }
+            ],
+        },
+    )
+    assert respuesta.status_code == 202, respuesta.text
 
 
 def _auth_header(client: TestClient, credenciales: dict) -> dict:
@@ -131,20 +164,21 @@ def test_cada_rol_tiene_usuario_semilla_que_inicia_sesion(rol: RolEnum) -> None:
 )
 def test_matriz_de_permisos_por_rol(endpoint: str, rol: RolEnum) -> None:
     client = TestClient(create_app())
+    _registrar_cajon(client)
     headers = _auth_header(client, CREDENCIALES_POR_ROL[rol])
     ruta, payload = ENDPOINTS_PROTEGIDOS[endpoint]
     total_logs_previos = len(auditoria_service.registros)
 
     respuesta = client.post(ruta, json=payload, headers=headers)
 
-    assert len(auditoria_service.registros) == total_logs_previos + 1
-    ultima_accion = auditoria_service.registros[-1].accion
+    acciones_nuevas = [r.accion for r in auditoria_service.registros[total_logs_previos:]]
     if rol in ROLES_PERMITIDOS[endpoint]:
-        assert respuesta.status_code == 200
-        assert not ultima_accion.startswith("ACCESO_DENEGADO")
+        assert respuesta.status_code == 200, respuesta.text
+        assert acciones_nuevas
+        assert not any(a.startswith("ACCESO_DENEGADO") for a in acciones_nuevas)
     else:
         assert respuesta.status_code == 403
-        assert ultima_accion == f"ACCESO_DENEGADO:rol={rol.value}"
+        assert acciones_nuevas == [f"ACCESO_DENEGADO:rol={rol.value}"]
 
 
 @pytest.mark.parametrize("endpoint", list(ENDPOINTS_PROTEGIDOS))

@@ -13,6 +13,7 @@ from src.api.auth_routes import build_auth_router
 from src.api.calibration_routes import build_calibration_router
 from src.api.inference_routes import build_inference_router
 from src.services.audit_service import auditoria_service
+from src.services.calibracion_service import CalibracionService
 from src.services.parking_state_service import ParkingStateService
 from src.validators.schema_validator import InferenceSchemaValidator
 from src.websocket.gateway import WebSocketBroadcastGateway
@@ -44,13 +45,21 @@ def create_app(schema_path: Optional[Path] = None) -> FastAPI:
     validator = InferenceSchemaValidator(schema_path=schema_path)
     ws_gateway = WebSocketBroadcastGateway()
     state_service = ParkingStateService(ws_gateway=ws_gateway, auditoria=auditoria_service)
+    calibracion_service = CalibracionService()
+    # Expuestos para inspección en pruebas de integración.
+    app.state.parking_state_service = state_service
+    app.state.calibracion_service = calibracion_service
 
     app.include_router(
         build_inference_router(validator=validator, state_service=state_service)
     )
     app.include_router(build_auth_router())
-    app.include_router(build_calibration_router())
-    app.include_router(build_access_router())
+    app.include_router(
+        build_calibration_router(
+            state_service=state_service, calibracion_service=calibracion_service
+        )
+    )
+    app.include_router(build_access_router(state_service=state_service))
 
     @app.get("/health", tags=["System"])
     async def health_check() -> dict[str, str]:

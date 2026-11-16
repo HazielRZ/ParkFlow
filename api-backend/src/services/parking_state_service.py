@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from dataclasses import replace
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from src.models.entities import ParkingSlotRecord
@@ -63,18 +64,68 @@ class ParkingStateService:
         )
         return summary
 
+    def obtener_cajon(self, parking_lot_id: str, polygon_id: str) -> Optional[ParkingSlotRecord]:
+        """Último estado conocido de un cajón, o `None` si `/cv-service` nunca lo ha reportado."""
+        return self._slots_by_lot.get(parking_lot_id, {}).get(polygon_id)
+
+    async def actualizar_estado_manual(
+        self, parking_lot_id: str, polygon_id: str, estado: str, id_usuario: int
+    ) -> Optional[ParkingSlotRecord]:
+        """Fija el estado de un cajón desde el registro manual de accesos.
+
+        Retorna el registro actualizado, o `None` si el cajón no existe. El cambio se
+        audita a nombre de `id_usuario` y se difunde por WebSocket igual que una inferencia.
+        """
+        previo = self.obtener_cajon(parking_lot_id, polygon_id)
+        if previo is None:
+            return None
+
+        nuevo = replace(
+            previo,
+            state=estado,
+            vehicle_type=None if estado == "Libre" else previo.vehicle_type,
+            updated_at=datetime.now(timezone.utc),
+        )
+        self._auditar_cambio_de_estado(previo, nuevo, id_usuario=id_usuario)
+        self._slots_by_lot[parking_lot_id][polygon_id] = nuevo
+
+        await self._ws_gateway.broadcast_state_update(
+            {
+                "event": "parking_state_updated",
+                "parking_lot_id": parking_lot_id,
+                "timestamp": nuevo.updated_at.isoformat().replace("+00:00", "Z"),
+                "frame_sequence": nuevo.frame_sequence,
+                "polygons": [
+                    {
+                        "polygon_id": nuevo.polygon_id,
+                        "slot_name": nuevo.slot_name,
+                        "state": nuevo.state,
+                        "confidence": nuevo.confidence,
+                        "iou_ratio": nuevo.iou_ratio,
+                        "vehicle_type": nuevo.vehicle_type,
+                    }
+                ],
+                "metrics": self.get_lot_summary(parking_lot_id),
+            }
+        )
+        return nuevo
+
     def _auditar_cambio_de_estado(
-        self, previo: Optional[ParkingSlotRecord], nuevo: ParkingSlotRecord
+        self,
+        previo: Optional[ParkingSlotRecord],
+        nuevo: ParkingSlotRecord,
+        id_usuario: Optional[int] = None,
     ) -> None:
         """Registra en bitácora la transición de estado de un cajón (DoD #3 de PF-16).
 
         La primera observación de un cajón no se registra porque no hay estado anterior;
-        tampoco se registran frames que repiten el mismo estado.
+        tampoco se registran frames que repiten el mismo estado. `id_usuario` es `None`
+        cuando el cambio lo reporta `/cv-service`, y el usuario cuando es un registro manual.
         """
         if previo is None or previo.state == nuevo.state:
             return
         self._auditoria.registrar(
-            id_usuario=None,
+            id_usuario=id_usuario,
             accion=(
                 f"CAMBIO_ESTADO_CAJON:lote={nuevo.parking_lot_id},"
                 f"poligono={nuevo.polygon_id},cajon={nuevo.slot_name},"
