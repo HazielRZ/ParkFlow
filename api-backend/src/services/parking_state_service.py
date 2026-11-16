@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from src.models.entities import ParkingSlotRecord
+from src.services.audit_service import AuditoriaService
 from src.websocket.gateway import WebSocketBroadcastGateway
 
 
@@ -14,8 +15,13 @@ class ParkingStateService:
 
     CAPACITY_ALERT_THRESHOLD = 0.90
 
-    def __init__(self, ws_gateway: WebSocketBroadcastGateway) -> None:
+    def __init__(
+        self,
+        ws_gateway: WebSocketBroadcastGateway,
+        auditoria: AuditoriaService,
+    ) -> None:
         self._ws_gateway = ws_gateway
+        self._auditoria = auditoria
         self._slots_by_lot: Dict[str, Dict[str, ParkingSlotRecord]] = {}
 
     async def process_inference_event(self, validated_payload: dict[str, Any]) -> dict[str, Any]:
@@ -41,6 +47,7 @@ class ParkingStateService:
                 frame_sequence=frame_sequence,
                 updated_at=ts,
             )
+            self._auditar_cambio_de_estado(lot_slots.get(record.polygon_id), record)
             lot_slots[record.polygon_id] = record
 
         summary = self.get_lot_summary(parking_lot_id)
@@ -55,6 +62,25 @@ class ParkingStateService:
             }
         )
         return summary
+
+    def _auditar_cambio_de_estado(
+        self, previo: Optional[ParkingSlotRecord], nuevo: ParkingSlotRecord
+    ) -> None:
+        """Registra en bitácora la transición de estado de un cajón (DoD #3 de PF-16).
+
+        La primera observación de un cajón no se registra porque no hay estado anterior;
+        tampoco se registran frames que repiten el mismo estado.
+        """
+        if previo is None or previo.state == nuevo.state:
+            return
+        self._auditoria.registrar(
+            id_usuario=None,
+            accion=(
+                f"CAMBIO_ESTADO_CAJON:lote={nuevo.parking_lot_id},"
+                f"poligono={nuevo.polygon_id},cajon={nuevo.slot_name},"
+                f"anterior={previo.state},nuevo={nuevo.state}"
+            ),
+        )
 
     def get_lot_summary(self, parking_lot_id: str) -> dict[str, Any]:
         """Calcula métricas de disponibilidad y alerta de saturación (> 90%, RF-04)."""

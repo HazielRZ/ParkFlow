@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 
 from src.models.usuario import LogAccesoEventoRecord
 
@@ -17,7 +17,8 @@ class AuditoriaService:
         self._registros: List[LogAccesoEventoRecord] = []
         self._contador = 0
 
-    def registrar(self, id_usuario: int, accion: str) -> LogAccesoEventoRecord:
+    def registrar(self, id_usuario: Optional[int], accion: str) -> LogAccesoEventoRecord:
+        """Registra un evento. `id_usuario=None` para eventos del sistema (sin usuario)."""
         self._contador += 1
         registro = LogAccesoEventoRecord(
             id_log=self._contador,

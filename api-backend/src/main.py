@@ -12,6 +12,7 @@ from src.api.access_routes import build_access_router
 from src.api.auth_routes import build_auth_router
 from src.api.calibration_routes import build_calibration_router
 from src.api.inference_routes import build_inference_router
+from src.services.audit_service import auditoria_service
 from src.services.parking_state_service import ParkingStateService
 from src.validators.schema_validator import InferenceSchemaValidator
 from src.websocket.gateway import WebSocketBroadcastGateway
@@ -42,7 +43,7 @@ def create_app(schema_path: Optional[Path] = None) -> FastAPI:
 
     validator = InferenceSchemaValidator(schema_path=schema_path)
     ws_gateway = WebSocketBroadcastGateway()
-    state_service = ParkingStateService(ws_gateway=ws_gateway)
+    state_service = ParkingStateService(ws_gateway=ws_gateway, auditoria=auditoria_service)
 
     app.include_router(
         build_inference_router(validator=validator, state_service=state_service)

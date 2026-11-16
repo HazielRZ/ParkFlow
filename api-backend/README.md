@@ -56,3 +56,16 @@ Login con `POST /api/auth/login`, restringido a correos `@morelia.tecnm.mx`. Los
 ❌ responde `403` y queda en la bitácora como `ACCESO_DENEGADO:rol=<rol>`. La matriz está cubierta en `tests/test_auth_rbac.py::test_matriz_de_permisos_por_rol`: si cambias los roles de un endpoint, actualiza esta tabla y ese test.
 
 > **Base de datos**: el catálogo de roles en PostgreSQL debe contener los mismos 7 valores. `DevOps/QA` e `Invitado` son nuevos respecto a la semilla original (`Administrador`, `Vigilancia`, `Estudiante`, `Tech Lead`, `Desarrollador`).
+
+### Bitácora de auditoría
+
+`AuditoriaService` (`src/services/audit_service.py`) registra:
+
+| Evento | `accion` | `id_usuario` |
+| :--- | :--- | :--- |
+| Login exitoso | `LOGIN_EXITOSO` | Usuario que inició sesión |
+| Acceso permitido a endpoint protegido | `CALIBRACION_CAJON:...` / `REGISTRO_MANUAL_ACCESO:...` | Usuario autenticado |
+| Rechazo RBAC (`403`) | `ACCESO_DENEGADO:rol=<rol>` | Usuario autenticado |
+| Cambio de estado de un cajón | `CAMBIO_ESTADO_CAJON:lote=...,poligono=...,cajon=...,anterior=<estado>,nuevo=<estado>` | Vacío (evento del sistema, lo reporta `/cv-service`) |
+
+Un cambio de estado se registra solo cuando el estado nuevo es distinto del anterior. La primera vez que se ve un cajón no hay estado anterior, así que no se registra.

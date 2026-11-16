@@ -5,7 +5,7 @@ from __future__ import annotations
 import enum
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from passlib.context import CryptContext
 
@@ -40,10 +40,14 @@ class UsuarioRecord:
 
 @dataclass
 class LogAccesoEventoRecord:
-    """Representación en memoria/persistencia de la tabla `Log_Acceso_Evento`."""
+    """Representación en memoria/persistencia de la tabla `Log_Acceso_Evento`.
+
+    `id_usuario` es `None` en eventos del sistema que no origina un usuario, como los
+    cambios de estado de cajones que reporta `/cv-service`.
+    """
 
     id_log: int
-    id_usuario: int
+    id_usuario: Optional[int]
     accion: str
     fecha_hora: datetime
 
