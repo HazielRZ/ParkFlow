@@ -14,6 +14,11 @@ DOMINIO_INSTITUCIONAL = "@morelia.tecnm.mx"
 ERROR_DOMINIO_NO_INSTITUCIONAL = "dominio_no_institucional"
 
 
+def es_correo_institucional(correo: str) -> bool:
+    """Regla única de RNF-02, usada en el login y al revalidar el JWT."""
+    return correo.lower().endswith(DOMINIO_INSTITUCIONAL)
+
+
 class UsuarioLogin(BaseModel):
     """Credenciales de acceso. Rechaza en frontera cualquier correo no institucional."""
 
@@ -23,7 +28,7 @@ class UsuarioLogin(BaseModel):
     @field_validator("correo")
     @classmethod
     def validar_dominio_institucional(cls, v: EmailStr) -> EmailStr:
-        if not str(v).lower().endswith(DOMINIO_INSTITUCIONAL):
+        if not es_correo_institucional(str(v)):
             raise PydanticCustomError(
                 ERROR_DOMINIO_NO_INSTITUCIONAL,
                 f"Acceso denegado: solo se permite correo institucional "
