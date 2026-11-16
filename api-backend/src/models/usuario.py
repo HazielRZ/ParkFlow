@@ -13,13 +13,19 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class RolEnum(str, enum.Enum):
-    """Espejo de `rol_enum` en PostgreSQL."""
+    """Roles del sistema (PF-16). Deben coincidir con el catálogo de roles en PostgreSQL.
+
+    `Administrador` es el rol único de Administrador/Product Owner: el PO no tiene
+    un rol aparte, opera con los permisos de Administrador.
+    """
 
     ADMINISTRADOR = "Administrador"
     VIGILANCIA = "Vigilancia"
     ESTUDIANTE = "Estudiante"
     TECH_LEAD = "Tech Lead"
+    DEVOPS_QA = "DevOps/QA"
     DESARROLLADOR = "Desarrollador"
+    INVITADO = "Invitado"
 
 
 @dataclass
@@ -57,31 +63,29 @@ class UsuarioRepository:
 
 
 def _construir_repositorio_demo() -> UsuarioRepository:
-    """Semilla de usuarios institucionales para demo/desarrollo local.
+    """Semilla de usuarios institucionales para demo/desarrollo local (uno por rol).
 
     Sustituir por una sesión de SQLAlchemy / cliente Supabase contra la
     tabla `Usuario` real en producción.
     """
+    semilla = [
+        (1, "admin@morelia.tecnm.mx", "Admin123*", RolEnum.ADMINISTRADOR),
+        (2, "vigilancia@morelia.tecnm.mx", "Vigila123*", RolEnum.VIGILANCIA),
+        (3, "l23121070@morelia.tecnm.mx", "Dev123*", RolEnum.DESARROLLADOR),
+        (4, "techlead@morelia.tecnm.mx", "TechLead123*", RolEnum.TECH_LEAD),
+        (5, "devops.qa@morelia.tecnm.mx", "DevOpsQA123*", RolEnum.DEVOPS_QA),
+        (6, "estudiante@morelia.tecnm.mx", "Estudiante123*", RolEnum.ESTUDIANTE),
+        (7, "invitado@morelia.tecnm.mx", "Invitado123*", RolEnum.INVITADO),
+    ]
     return UsuarioRepository(
         usuarios=[
             UsuarioRecord(
-                id_usuario=1,
-                correo="admin@morelia.tecnm.mx",
-                password_hash=pwd_context.hash("Admin123*"),
-                rol=RolEnum.ADMINISTRADOR,
-            ),
-            UsuarioRecord(
-                id_usuario=2,
-                correo="vigilancia@morelia.tecnm.mx",
-                password_hash=pwd_context.hash("Vigila123*"),
-                rol=RolEnum.VIGILANCIA,
-            ),
-            UsuarioRecord(
-                id_usuario=3,
-                correo="l23121070@morelia.tecnm.mx",
-                password_hash=pwd_context.hash("Dev123*"),
-                rol=RolEnum.DESARROLLADOR,
-            ),
+                id_usuario=id_usuario,
+                correo=correo,
+                password_hash=pwd_context.hash(password),
+                rol=rol,
+            )
+            for id_usuario, correo, password, rol in semilla
         ]
     )
 
