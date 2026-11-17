@@ -178,9 +178,8 @@ body {
 
 .pf-zone-bar {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
-  overflow-x: auto;
-  padding-bottom: 0.15rem;
 }
 
 .pf-btn,
@@ -200,6 +199,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
+  flex: 0 0 auto;
   transition: background 0.15s ease, border-color 0.15s ease;
   white-space: nowrap;
 }
@@ -265,9 +265,8 @@ body {
 /* Filter bar */
 .pf-filter-bar {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
-  overflow-x: auto;
-  padding-bottom: 0.15rem;
 }
 
 /* Interactive SVG Map Container */

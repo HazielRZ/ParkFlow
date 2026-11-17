@@ -62,8 +62,10 @@ export function DashboardView({ wsUrl }) {
     if (!simulateHighOccupancy) {
       return activeZone.defaultSlots;
     }
+    const total = activeZone.defaultSlots.length;
+    const keepOneFree = total > 0 && (total - 1) / total >= 0.9;
     return activeZone.defaultSlots.map((slot, idx) =>
-      idx === 0
+      keepOneFree && idx === 0
         ? { ...slot, state: "Libre", vehicle_type: null, iou_ratio: 0.03 }
         : {
             ...slot,
@@ -101,9 +103,13 @@ export function DashboardView({ wsUrl }) {
 
   const connectionLabel = connected
     ? "En línea (WebSocket)"
-    : reconnecting
-      ? `Reconectando (intento #${attempt})...`
-      : "Sin conexión";
+    : isUsingDemoData
+      ? reconnecting
+        ? `Modo demo • Reconectando (#${attempt})`
+        : "Modo demostración"
+      : reconnecting
+        ? `Reconectando (intento #${attempt})...`
+        : "Sin conexión";
 
   return (
     <main className="pf-app">
