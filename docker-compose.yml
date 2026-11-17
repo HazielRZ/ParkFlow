@@ -1,7 +1,25 @@
-# ParkFlow — Orquestación de Desarrollo Local (RNF-05 & INT-SW-01)
+# ParkFlow — Orquestación de Desarrollo Local (RNF-04, RNF-05 & INT-SW-01)
 # Licencia: PolyForm Noncommercial License 1.0.0
 
 services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: parkflow-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: parkflow_db
+      POSTGRES_USER: parkflow_user
+      POSTGRES_PASSWORD: parkflow_password
+    ports:
+      - "5432:5432"
+    networks:
+      - client-realtime-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parkflow_user -d parkflow_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api-backend:
     build:
       context: ./api-backend
@@ -9,18 +27,27 @@ services:
     container_name: parkflow-api-backend
     ports:
       - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       - PARKFLOW_INFERENCE_SCHEMA_PATH=/contracts/json-schema/inference-state.schema.json
       # RNF-02: sobreescribir en despliegue real, nunca usar el valor dummy en producción.
       - PARKFLOW_JWT_SECRET_KEY=parkflow-itm-dummy-secret-key-CAMBIAR-EN-PRODUCCION
       - PARKFLOW_JWT_ALGORITHM=HS256
       - PARKFLOW_JWT_EXPIRE_MINUTES=60
+      - DATABASE_URL=postgresql://parkflow_user:parkflow_password@postgres:5432/parkflow_db
     volumes:
       - ./contracts:/contracts:ro
     networks:
       - cv-ingestion-net
       - client-realtime-net
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost', 8000), 2); s.close()\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   cv-service:
     build:
@@ -28,7 +55,8 @@ services:
       dockerfile: Dockerfile
     container_name: parkflow-cv-service
     depends_on:
-      - api-backend
+      api-backend:
+        condition: service_healthy
     environment:
       - PARKFLOW_BACKEND_URL=http://api-backend:8000
       - PARKFLOW_INFERENCE_SCHEMA_PATH=/contracts/json-schema/inference-state.schema.json
@@ -36,7 +64,12 @@ services:
       - ./contracts:/contracts:ro
     networks:
       - cv-ingestion-net
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f python || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   client-app:
     build:
@@ -44,14 +77,20 @@ services:
       dockerfile: Dockerfile
     container_name: parkflow-client-app
     depends_on:
-      - api-backend
+      api-backend:
+        condition: service_healthy
     ports:
       - "5173:5173"
     environment:
       - VITE_BACKEND_WS_URL=ws://localhost:8000/ws/parking-states
     networks:
       - client-realtime-net
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:5173 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
 networks:
   cv-ingestion-net:
