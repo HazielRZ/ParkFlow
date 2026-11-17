@@ -20,6 +20,7 @@ api-backend/
 │   ├── websocket/        # Gateway de broadcast en tiempo real hacia /client-app
 │   ├── services/         # Cálculo de ocupación y alertas de capacidad (RF-04)
 │   ├── models/           # Entidades de dominio y persistencia
+│   ├── security/         # JWT y guardias RBAC (RNF-02)
 │   ├── validators/       # Validación en runtime con JSON Schema (Draft 2020-12)
 │   └── main.py           # Punto de entrada FastAPI
 ├── tests/
@@ -27,3 +28,53 @@ api-backend/
 ├── .dockerignore
 └── requirements.txt
 ```
+
+## Autenticación y RBAC (RNF-02 / PF-16)
+
+Login con `POST /api/auth/login`, restringido a correos `@morelia.tecnm.mx`. Los endpoints protegidos exigen `Authorization: Bearer <token>` y validan el rol con `VerificadorRoles` (`src/security/rbac.py`).
+
+### Roles
+
+| Rol (`RolEnum`) | Valor | Quién lo usa |
+| :--- | :--- | :--- |
+| `ADMINISTRADOR` | `Administrador` | Administración del sistema y **Product Owner** (Administrador/PO es un solo rol) |
+| `VIGILANCIA` | `Vigilancia` | Personal de caseta / control de accesos |
+| `TECH_LEAD` | `Tech Lead` | Líder técnico del equipo |
+| `DEVOPS_QA` | `DevOps/QA` | Despliegue y aseguramiento de calidad |
+| `DESARROLLADOR` | `Desarrollador` | Equipo de desarrollo |
+| `ESTUDIANTE` | `Estudiante` | Usuarios del estacionamiento |
+| `INVITADO` | `Invitado` | Acceso temporal; puede iniciar sesión pero no consume endpoints protegidos |
+
+### Matriz de permisos (mínimo privilegio)
+
+| Endpoint | Administrador | Vigilancia | Tech Lead | DevOps/QA | Desarrollador | Estudiante | Invitado |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `POST /api/auth/login` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `POST /api/calibracion/cajones` | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| `POST /api/accesos/registro-manual` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+❌ responde `403` y queda en la bitácora como `ACCESO_DENEGADO:rol=<rol>`. La matriz está cubierta en `tests/test_auth_rbac.py::test_matriz_de_permisos_por_rol`: si cambias los roles de un endpoint, actualiza esta tabla y ese test.
+
+### Endpoints operativos
+
+Los dos identifican el cajón como en el contrato INT-SW-01 (`parking_lot_id` + `polygon_id`) y responden `404` si `/cv-service` todavía no ha reportado ese cajón.
+
+- **`POST /api/accesos/registro-manual`**: `{parking_lot_id, polygon_id, placa, estado}`, con `estado` en `Libre` (salida) u `Ocupado` (entrada). Cambia el estado real del cajón, lo difunde por WebSocket como un `parking_state_updated` y lo audita a nombre del usuario. `En maniobra` no se acepta, porque solo lo detecta la cámara. La siguiente inferencia de `/cv-service` vuelve a fijar el estado según lo que vea la cámara.
+- **`POST /api/calibracion/cajones`**: `{parking_lot_id, polygon_id, umbral_iou_libre, umbral_iou_ocupado}`, ambos entre 0 y 1 y con `umbral_iou_libre < umbral_iou_ocupado` (el rango intermedio es `En maniobra`, ver AGENTS.md §5.1). Guarda la última calibración del cajón en `CalibracionService` (en memoria por ahora).
+
+> **Base de datos**: el catálogo de roles en PostgreSQL debe contener los mismos 7 valores. `DevOps/QA` e `Invitado` son nuevos respecto a la semilla original (`Administrador`, `Vigilancia`, `Estudiante`, `Tech Lead`, `Desarrollador`).
+
+### Bitácora de auditoría
+
+`AuditoriaService` (`src/services/audit_service.py`) registra:
+
+| Evento | `accion` | `id_usuario` |
+| :--- | :--- | :--- |
+| Login exitoso | `LOGIN_EXITOSO` | Usuario que inició sesión |
+| Login fallido (`401`) | `LOGIN_FALLIDO:correo=<correo>` | La cuenta, si el correo existe (contraseña incorrecta); vacío si no existe |
+| Login con correo no institucional (`422`) | `LOGIN_RECHAZADO_DOMINIO:correo=<correo>` | Vacío |
+| Acceso permitido a endpoint protegido | `CALIBRACION_CAJON:...` / `REGISTRO_MANUAL_ACCESO:...` | Usuario autenticado |
+| Rechazo RBAC (`403`) | `ACCESO_DENEGADO:rol=<rol>` | Usuario autenticado |
+| Cambio de estado de un cajón | `CAMBIO_ESTADO_CAJON:lote=...,poligono=...,cajon=...,anterior=<estado>,nuevo=<estado>` | Vacío si lo reporta `/cv-service`; el usuario si viene de un registro manual |
+
+Un cambio de estado se registra solo cuando el estado nuevo es distinto del anterior. La primera vez que se ve un cajón no hay estado anterior, así que no se registra.
