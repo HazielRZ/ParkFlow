@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ParkFlow ITM">
-  <rect width="512" height="512" rx="112" fill="#0f172a" />
-  <rect x="44" y="44" width="424" height="424" rx="84" fill="#1e293b" stroke="#38bdf8" stroke-width="12" />
-  <path d="M168 376V136h104c52 0 88 32 88 80s-36 80-88 80h-56v80h-48zm48-124h52c26 0 44-14 44-36s-18-36-44-36h-52v72z" fill="#f8fafc" />
-  <circle cx="372" cy="364" r="36" fill="#16a34a" stroke="#f8fafc" stroke-width="8" />
+  <rect width="512" height="512" rx="112" fill="#1B396A" />
+  <rect x="44" y="44" width="424" height="424" rx="84" fill="#142B52" stroke="#4B7BE5" stroke-width="12" />
+  <path d="M168 376V136h104c52 0 88 32 88 80s-36 80-88 80h-56v80h-48zm48-124h52c26 0 44-14 44-36s-18-36-44-36h-52v72z" fill="#FFFFFF" />
+  <circle cx="372" cy="364" r="36" fill="#16A34A" stroke="#FFFFFF" stroke-width="8" />
 </svg>

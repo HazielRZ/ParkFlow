@@ -1,10 +1,10 @@
 /**
  * Vista principal móvil/PWA de disponibilidad en tiempo real (PF-19 / RF-01 / RF-04 / RNF-03 / RNF-06).
- * Diseñada para consulta en <= 3 pasos desde dispositivos móviles.
+ * Adaptada al Manual de Identidad Gráfica del TecNM (Azul Pantone 294 C #1B396A).
  * Licencia: PolyForm Noncommercial License 1.0.0
  */
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { CAMPUS_ZONES, ParkingGrid } from "../components/ParkingGrid.jsx";
 import {
   computeMetricsFromPolygons,
@@ -35,6 +35,14 @@ export function DashboardView({ wsUrl }) {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [demoEnabled, setDemoEnabled] = useState(true);
   const [simulateHighOccupancy, setSimulateHighOccupancy] = useState(false);
+  const [theme, setTheme] = useState("light");
+  const [activeNav, setActiveNav] = useState("mapa");
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("data-theme", theme);
+    }
+  }, [theme]);
 
   const activeZone = useMemo(
     () =>
@@ -53,7 +61,8 @@ export function DashboardView({ wsUrl }) {
     return [];
   }, [polygonsByLot, parkingLotId, livePolygons, selectedZoneId]);
 
-  const isUsingDemoData = !connected && demoEnabled && liveZonePolygons.length === 0;
+  const isUsingDemoData =
+    !connected && demoEnabled && liveZonePolygons.length === 0;
 
   const displayedPolygons = useMemo(() => {
     if (!isUsingDemoData) {
@@ -78,7 +87,11 @@ export function DashboardView({ wsUrl }) {
   }, [isUsingDemoData, simulateHighOccupancy, activeZone, liveZonePolygons]);
 
   const displayedMetrics = useMemo(() => {
-    if (!isUsingDemoData && parkingLotId === selectedZoneId && liveZonePolygons.length > 0) {
+    if (
+      !isUsingDemoData &&
+      parkingLotId === selectedZoneId &&
+      liveZonePolygons.length > 0
+    ) {
       return liveMetrics;
     }
     return computeMetricsFromPolygons(displayedPolygons);
@@ -111,10 +124,14 @@ export function DashboardView({ wsUrl }) {
         ? `Reconectando (intento #${attempt})...`
         : "Sin conexión";
 
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
+  };
+
   return (
     <main className="pf-app">
-      {/* Encabezado móvil compacto */}
-      <header className="pf-header">
+      {/* Regla 1: Header curvo en Azul Pantone 294 C (#1B396A) */}
+      <header className="pf-hero-header">
         <div className="pf-header-top">
           <div className="pf-brand">
             <span className="pf-brand-badge" aria-hidden="true">
@@ -125,11 +142,22 @@ export function DashboardView({ wsUrl }) {
                 ParkFlow — Monitoreo en Tiempo Real ({activeZone.id})
               </h1>
               <p className="pf-subtitle">
-                TecNM Campus Morelia • Consulta rápida en &le; 3 pasos
+                TecNM Campus Morelia • Consulta en &le; 3 pasos
               </p>
             </div>
           </div>
 
+          <button
+            type="button"
+            className="pf-theme-toggle"
+            onClick={toggleTheme}
+            aria-label="Alternar tema claro u oscuro"
+          >
+            {theme === "light" ? "☾ Oscuro" : "☀ Claro"}
+          </button>
+        </div>
+
+        <div className="pf-header-status-row">
           <div
             className="pf-conn-badge"
             data-status={connectionStatus}
@@ -138,131 +166,211 @@ export function DashboardView({ wsUrl }) {
             <span className="pf-conn-dot" aria-hidden="true" />
             <span>Estado de conexión: {connectionLabel}</span>
           </div>
-        </div>
 
-        {lastUpdated && (
-          <small style={{ color: "#94a3b8", fontSize: "0.74rem" }}>
-            Última actualización recibida: {lastUpdated}
-          </small>
-        )}
+          {lastUpdated && (
+            <small style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.72rem" }}>
+              Actualizado: {lastUpdated}
+            </small>
+          )}
+        </div>
       </header>
 
-      {/* Alerta automática de saturación >= 90% (RF-04) */}
-      {displayedMetrics.high_occupancy_alert && (
-        <div className="pf-alert-saturation" role="alert">
-          <span>
-            ⚠️ Alerta RF-04: Ocupación superior al 90% de capacidad en{" "}
-            {activeZone.id} ({occupancyPercentage}% ocupado). Se recomienda
-            dirigirse a una zona alterna.
-          </span>
-        </div>
-      )}
+      <div className="pf-content">
+        {/* Regla 1 y 2: Tarjeta principal superpuesta (-40px) y titular con cursiva */}
+        <section
+          className="pf-summary-float-card"
+          aria-label="Resumen y selección de estacionamiento"
+        >
+          <h2 className="pf-section-headline">
+            Encuentra tu <em className="pf-italic-accent">lugar</em> ideal
+          </h2>
 
-      {/* Aviso explícito de Modo Demostración cuando no hay backend conectado */}
-      {!connected && (
-        <section className="pf-demo-banner" aria-label="Modo demostración">
-          <div>
-            <strong>Modo demostración</strong> — Backend WebSocket no detectado.
-            {demoEnabled
-              ? " Mostrando croquis interactivo de referencia para validación UI."
-              : " Datos de demostración desactivados."}
+          {/* Paso 1: Selector de Zona / Estacionamiento (píldoras 9999px) */}
+          <div
+            className="pf-zone-bar"
+            role="tablist"
+            aria-label="Zonas del campus"
+          >
+            {CAMPUS_ZONES.map((zone) => (
+              <button
+                key={zone.id}
+                type="button"
+                className="pf-zone-tab"
+                aria-pressed={selectedZoneId === zone.id}
+                onClick={() => {
+                  setSelectedZoneId(zone.id);
+                  setSelectedSlot(null);
+                }}
+              >
+                {zone.shortName}
+              </button>
+            ))}
           </div>
-          <div className="pf-demo-actions">
-            <button
-              type="button"
-              className="pf-btn pf-btn-secondary"
-              onClick={() => setDemoEnabled((prev) => !prev)}
-            >
-              {demoEnabled ? "Ocultar demo" : "Activar modo demo"}
-            </button>
-            {demoEnabled && (
+
+          {/* Resumen de métricas en vivo (celdas con radio 12px) */}
+          <div className="pf-metrics-grid" aria-label="Resumen de disponibilidad">
+            <div className="pf-metric-card" data-variant="free">
+              <span
+                className="pf-metric-value"
+                style={{ color: "var(--status-success)" }}
+              >
+                {displayedMetrics.free}
+              </span>
+              <span className="pf-metric-label">Libres</span>
+            </div>
+            <div className="pf-metric-card" data-variant="maneuver">
+              <span
+                className="pf-metric-value"
+                style={{ color: "var(--status-warning)" }}
+              >
+                {displayedMetrics.in_maneuver}
+              </span>
+              <span className="pf-metric-label">En maniobra</span>
+            </div>
+            <div className="pf-metric-card" data-variant="occupied">
+              <span
+                className="pf-metric-value"
+                style={{ color: "var(--status-danger)" }}
+              >
+                {displayedMetrics.occupied}
+              </span>
+              <span className="pf-metric-label">Ocupados</span>
+            </div>
+            <div className="pf-metric-card" data-variant="ratio">
+              <span
+                className="pf-metric-value"
+                style={{ color: "var(--accent-text)" }}
+              >
+                {occupancyPercentage}%
+              </span>
+              <span className="pf-metric-label">
+                Ocupación ({displayedMetrics.total_slots} cajones)
+              </span>
+            </div>
+          </div>
+
+          {/* Paso 2: Filtros rápidos por estado (píldoras 9999px) */}
+          <div
+            className="pf-filter-bar"
+            role="group"
+            aria-label="Filtrar cajones por estado"
+          >
+            {STATE_FILTERS.map((filter) => (
+              <button
+                key={filter.id}
+                type="button"
+                className="pf-filter-chip"
+                aria-pressed={stateFilter === filter.id}
+                onClick={() => {
+                  setStateFilter(filter.id);
+                  setActiveNav(filter.id === "Libre" ? "libres" : "mapa");
+                }}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Alerta automática de saturación >= 90% (RF-04) */}
+        {displayedMetrics.high_occupancy_alert && (
+          <div className="pf-alert-saturation" role="alert">
+            <span>
+              ⚠️ Alerta RF-04: Ocupación superior al 90% de capacidad en{" "}
+              {activeZone.id} ({occupancyPercentage}% ocupado). Se recomienda
+              dirigirse a una zona alterna.
+            </span>
+          </div>
+        )}
+
+        {/* Aviso explícito de Modo Demostración cuando no hay backend conectado */}
+        {!connected && (
+          <section className="pf-demo-banner" aria-label="Modo demostración">
+            <div>
+              <strong>Modo demostración</strong> — Backend WebSocket no detectado.
+              {demoEnabled
+                ? " Mostrando croquis interactivo de referencia para validación UI."
+                : " Datos de demostración desactivados."}
+            </div>
+            <div className="pf-demo-actions">
               <button
                 type="button"
                 className="pf-btn pf-btn-secondary"
-                onClick={() => setSimulateHighOccupancy((prev) => !prev)}
+                onClick={() => setDemoEnabled((prev) => !prev)}
               >
-                {simulateHighOccupancy
-                  ? "Restaurar ocupación normal"
-                  : "Simular alerta ≥90% (RF-04)"}
+                {demoEnabled ? "Ocultar demo" : "Activar modo demo"}
               </button>
-            )}
-          </div>
-        </section>
-      )}
+              {demoEnabled && (
+                <button
+                  type="button"
+                  className="pf-btn pf-btn-secondary"
+                  onClick={() => setSimulateHighOccupancy((prev) => !prev)}
+                >
+                  {simulateHighOccupancy
+                    ? "Restaurar ocupación normal"
+                    : "Simular alerta ≥90% (RF-04)"}
+                </button>
+              )}
+            </div>
+          </section>
+        )}
 
-      {/* Paso 1: Selector de Zona / Estacionamiento (áreas táctiles >= 44x44px) */}
-      <section className="pf-controls" aria-label="Selección de estacionamiento y filtros">
-        <div className="pf-zone-bar" role="tablist" aria-label="Zonas del campus">
-          {CAMPUS_ZONES.map((zone) => (
-            <button
-              key={zone.id}
-              type="button"
-              className="pf-zone-tab"
-              aria-pressed={selectedZoneId === zone.id}
-              onClick={() => {
-                setSelectedZoneId(zone.id);
-                setSelectedSlot(null);
-              }}
-            >
-              {zone.shortName}
-            </button>
-          ))}
-        </div>
+        {/* Paso 3: Mapa SVG interactivo con carril central + selección de cajón */}
+        <ParkingGrid
+          polygons={displayedPolygons}
+          stateFilter={stateFilter}
+          selectedPolygonId={selectedSlot ? selectedSlot.polygon_id : undefined}
+          onSelectSlot={setSelectedSlot}
+          zoneName={activeZone.name}
+        />
+      </div>
 
-        {/* Resumen de métricas en vivo */}
-        <div className="pf-metrics-grid" aria-label="Resumen de disponibilidad">
-          <div className="pf-metric-card" data-variant="free">
-            <span className="pf-metric-value" style={{ color: "#4ade80" }}>
-              {displayedMetrics.free}
+      {/* Regla 4: Navbar flotante inferior tipo píldora */}
+      <div className="pf-floating-nav-wrapper">
+        <nav className="pf-floating-nav" aria-label="Navegación rápida ParkFlow">
+          <button
+            type="button"
+            className="pf-nav-item"
+            data-active={activeNav === "mapa"}
+            onClick={() => {
+              setActiveNav("mapa");
+              setStateFilter("Todos");
+            }}
+          >
+            <span className="pf-nav-icon-circle" aria-hidden="true">
+              🅿
             </span>
-            <span className="pf-metric-label">Libres</span>
-          </div>
-          <div className="pf-metric-card" data-variant="maneuver">
-            <span className="pf-metric-value" style={{ color: "#fbbf24" }}>
-              {displayedMetrics.in_maneuver}
-            </span>
-            <span className="pf-metric-label">En maniobra</span>
-          </div>
-          <div className="pf-metric-card" data-variant="occupied">
-            <span className="pf-metric-value" style={{ color: "#f87171" }}>
-              {displayedMetrics.occupied}
-            </span>
-            <span className="pf-metric-label">Ocupados</span>
-          </div>
-          <div className="pf-metric-card" data-variant="ratio">
-            <span className="pf-metric-value" style={{ color: "#38bdf8" }}>
-              {occupancyPercentage}%
-            </span>
-            <span className="pf-metric-label">
-              Ocupación ({displayedMetrics.total_slots} cajones)
-            </span>
-          </div>
-        </div>
+            <span>Mapa</span>
+          </button>
 
-        {/* Paso 2: Filtros rápidos por estado */}
-        <div className="pf-filter-bar" role="group" aria-label="Filtrar cajones por estado">
-          {STATE_FILTERS.map((filter) => (
-            <button
-              key={filter.id}
-              type="button"
-              className="pf-filter-chip"
-              aria-pressed={stateFilter === filter.id}
-              onClick={() => setStateFilter(filter.id)}
-            >
-              {filter.label}
-            </button>
-          ))}
-        </div>
-      </section>
+          <button
+            type="button"
+            className="pf-nav-item"
+            data-active={activeNav === "libres"}
+            onClick={() => {
+              setActiveNav("libres");
+              setStateFilter((prev) => (prev === "Libre" ? "Todos" : "Libre"));
+            }}
+          >
+            <span className="pf-nav-icon-circle" aria-hidden="true">
+              ✓
+            </span>
+            <span>Libres ({displayedMetrics.free})</span>
+          </button>
 
-      {/* Paso 3: Mapa SVG interactivo + selección de cajón */}
-      <ParkingGrid
-        polygons={displayedPolygons}
-        stateFilter={stateFilter}
-        selectedPolygonId={selectedSlot ? selectedSlot.polygon_id : undefined}
-        onSelectSlot={setSelectedSlot}
-        zoneName={activeZone.name}
-      />
+          <button
+            type="button"
+            className="pf-nav-item"
+            data-active={theme === "dark"}
+            onClick={toggleTheme}
+          >
+            <span className="pf-nav-icon-circle" aria-hidden="true">
+              {theme === "light" ? "☾" : "☀"}
+            </span>
+            <span>{theme === "light" ? "Oscuro" : "Claro"}</span>
+          </button>
+        </nav>
+      </div>
     </main>
   );
 }

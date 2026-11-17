@@ -6,6 +6,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { DashboardView } from "./views/DashboardView.jsx";
+import "./tokens.css";
 import "./styles.css";
 
 function registerServiceWorker() {
