@@ -23,6 +23,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
+COPY alembic.ini ./
+COPY migrations/ ./migrations/
 COPY src/ ./src/
 
 EXPOSE 8000

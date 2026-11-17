@@ -1,24 +1,26 @@
-# ParkFlow — Orquestación de Desarrollo Local (RNF-04, RNF-05 & INT-SW-01)
+# ParkFlow — Orquestación de Desarrollo Local (RNF-04, RNF-05, INT-SW-01 & INT-SW-02)
 # Licencia: PolyForm Noncommercial License 1.0.0
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: parkflow-postgres
+  db:
+    image: postgres:16-alpine
+    container_name: parkflow-db
     restart: always
     environment:
-      POSTGRES_DB: parkflow_db
-      POSTGRES_USER: parkflow_user
-      POSTGRES_PASSWORD: parkflow_password
-    ports:
-      - "5432:5432"
-    networks:
-      - client-realtime-net
+      POSTGRES_DB: parkflow
+      POSTGRES_USER: parkflow
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-parkflow_password}
+    volumes:
+      - parkflow-pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U parkflow_user -d parkflow_db"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U parkflow -d parkflow"]
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+    ports:
+      - "5433:5432"   # Solo desarrollo: quitar este mapeo en un despliegue real.
+    networks:
+      - db-net
 
   api-backend:
     build:
@@ -28,7 +30,7 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
     environment:
       - PARKFLOW_INFERENCE_SCHEMA_PATH=/contracts/json-schema/inference-state.schema.json
@@ -36,12 +38,13 @@ services:
       - PARKFLOW_JWT_SECRET_KEY=parkflow-itm-dummy-secret-key-CAMBIAR-EN-PRODUCCION
       - PARKFLOW_JWT_ALGORITHM=HS256
       - PARKFLOW_JWT_EXPIRE_MINUTES=60
-      - DATABASE_URL=postgresql://parkflow_user:parkflow_password@postgres:5432/parkflow_db
+      - PARKFLOW_DATABASE_URL=postgresql+psycopg://parkflow:${POSTGRES_PASSWORD:-parkflow_password}@db:5432/parkflow
     volumes:
       - ./contracts:/contracts:ro
     networks:
       - cv-ingestion-net
       - client-realtime-net
+      - db-net
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost', 8000), 2); s.close()\" || exit 1"]
@@ -92,9 +95,14 @@ services:
       timeout: 5s
       retries: 3
 
+volumes:
+  parkflow-pgdata:
+
 networks:
   cv-ingestion-net:
     driver: bridge
     internal: true
   client-realtime-net:
+    driver: bridge
+  db-net:
     driver: bridge
