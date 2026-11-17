@@ -44,7 +44,7 @@ jobs:
       - name: Linting Frontend (client-app)
         run: |
           cd client-app
-          npm ci
+          npm install
           npm run lint --if-present
 
       - name: Validar configuración de Docker Compose
