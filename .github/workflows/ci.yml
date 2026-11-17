@@ -33,8 +33,8 @@ jobs:
           PARKFLOW_INFERENCE_SCHEMA_PATH: ${{ github.workspace }}/contracts/json-schema/inference-state.schema.json
           PARKFLOW_JWT_SECRET_KEY: test-secret-key
         run: |
-          PYTHONPATH=api-backend/src pytest api-backend/tests
-          PYTHONPATH=cv-service/src pytest cv-service/tests
+          PYTHONPATH=api-backend pytest api-backend/tests
+          PYTHONPATH=cv-service pytest cv-service/tests
 
       - name: Configurar Node.js 20
         uses: actions/setup-node@v4
