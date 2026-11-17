@@ -1,0 +1,51 @@
+name: CI Pipeline - ParkFlow
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias y Linter (Python)
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest
+          if [ -f api-backend/requirements.txt ]; then pip install -r api-backend/requirements.txt; fi
+          if [ -f cv-service/requirements.txt ]; then pip install -r cv-service/requirements.txt; fi
+
+      - name: Ejecutar Linting (api-backend y cv-service)
+        run: |
+          flake8 api-backend cv-service --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Ejecutar Pruebas Automatizadas (pytest)
+        env:
+          PARKFLOW_INFERENCE_SCHEMA_PATH: ${{ github.workspace }}/contracts/json-schema/inference-state.schema.json
+          PARKFLOW_JWT_SECRET_KEY: test-secret-key
+        run: |
+          PYTHONPATH=api-backend pytest api-backend/tests
+          PYTHONPATH=cv-service pytest cv-service/tests
+
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Linting Frontend (client-app)
+        run: |
+          cd client-app
+          npm install
+          npm run lint --if-present
+
+      - name: Validar configuración de Docker Compose
+        run: docker compose config
