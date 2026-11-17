@@ -1,0 +1,510 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.pf-app {
+  max-width: 640px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 104px; /* Espacio para la navbar flotante inferior */
+}
+
+/* Regla 1: Header curvo en #1B396A con border-bottom-radius 28px */
+.pf-hero-header {
+  background-color: var(--accent);
+  color: #ffffff;
+  border-bottom-left-radius: 28px;
+  border-bottom-right-radius: 28px;
+  padding: max(1rem, env(safe-area-inset-top)) 1.125rem 3.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pf-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.pf-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.pf-brand-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.16);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 1.15rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pf-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #ffffff;
+}
+
+.pf-subtitle {
+  margin: 0.15rem 0 0;
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.pf-theme-toggle {
+  min-height: var(--touch-min);
+  min-width: var(--touch-min);
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pf-header-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Regla 3: Badges en píldora completa (9999px) */
+.pf-conn-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.74rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.pf-conn-badge[data-status="online"] {
+  background: rgba(22, 163, 74, 0.28);
+  border-color: #4ade80;
+}
+
+.pf-conn-badge[data-status="reconnecting"] {
+  background: rgba(234, 88, 12, 0.28);
+  border-color: #fb923c;
+}
+
+.pf-conn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+}
+
+/* Contenido principal con márgenes laterales */
+.pf-content {
+  padding: 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+/* Regla 1: Tarjeta principal superpuesta con margin-top: -40px y --shadow-float */
+.pf-summary-float-card {
+  margin-top: -40px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-float);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Regla 2: Titulares con énfasis en cursiva y color --accent-text */
+.pf-section-headline {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.pf-italic-accent {
+  font-style: italic;
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+/* Regla 3: Celdas de métricas con radio de 12px (--radius-input) */
+.pf-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.pf-metric-card {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-input);
+  padding: 0.6rem 0.45rem;
+  text-align: center;
+}
+
+.pf-metric-card[data-variant="free"] {
+  border-bottom: 3px solid var(--status-success);
+}
+
+.pf-metric-card[data-variant="maneuver"] {
+  border-bottom: 3px solid var(--status-warning);
+}
+
+.pf-metric-card[data-variant="occupied"] {
+  border-bottom: 3px solid var(--status-danger);
+}
+
+.pf-metric-card[data-variant="ratio"] {
+  border-bottom: 3px solid var(--accent-border);
+}
+
+.pf-metric-value {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.pf-metric-label {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Regla 3: Botones CTA, pestañas de zona y chips de filtro en píldora (9999px) */
+.pf-zone-bar,
+.pf-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pf-btn,
+.pf-zone-tab,
+.pf-filter-chip {
+  min-height: var(--touch-min);
+  min-width: var(--touch-min);
+  padding: 0.5rem 0.95rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.pf-zone-tab[aria-pressed="true"],
+.pf-filter-chip[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent-border);
+  color: #ffffff;
+}
+
+.pf-btn-secondary {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  border-color: var(--accent-border);
+  font-size: 0.76rem;
+  padding: 0.4rem 0.85rem;
+}
+
+/* Banners: Alerta RF-04 y Modo Demo (radio de tarjeta 20px) */
+.pf-alert-saturation {
+  background: var(--status-danger-bg);
+  border: 1.5px solid var(--status-danger);
+  color: var(--text-primary);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-card);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-weight: 600;
+  font-size: 0.84rem;
+}
+
+.pf-demo-banner {
+  background: var(--bg-surface);
+  border: 1px dashed var(--accent-border);
+  color: var(--text-primary);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+}
+
+.pf-demo-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Tarjeta del Mapa SVG (radio 20px) */
+.pf-map-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pf-map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pf-map-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.pf-legend {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.pf-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 500;
+}
+
+.pf-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  display: inline-block;
+}
+
+.pf-svg-wrapper {
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-input);
+  background: var(--map-canvas-bg);
+  border: 1px solid var(--border-subtle);
+}
+
+.pf-svg-canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.pf-slot-group {
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.pf-slot-group:focus-visible {
+  outline: 2px solid var(--accent-border);
+  outline-offset: 2px;
+}
+
+/* Tarjeta inferior de detalle del cajón seleccionado (radio 20px) */
+.pf-detail-sheet {
+  background: var(--bg-surface);
+  border: 2px solid var(--accent-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.pf-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pf-detail-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.pf-state-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.75rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.pf-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  font-size: 0.82rem;
+}
+
+.pf-detail-item {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-input);
+  padding: 0.5rem 0.65rem;
+}
+
+.pf-detail-item strong {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  margin-bottom: 0.15rem;
+}
+
+/* Regla 4: Navbar flotante inferior tipo píldora (9999px) */
+.pf-floating-nav-wrapper {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+}
+
+.pf-floating-nav {
+  pointer-events: auto;
+  width: calc(100% - 32px);
+  max-width: 560px;
+  margin: 0 16px max(16px, env(safe-area-inset-bottom));
+  padding: 0.4rem 0.55rem;
+  border-radius: var(--radius-pill);
+  background: var(--bg-nav);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-float);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.pf-nav-item {
+  min-height: var(--touch-min);
+  min-width: var(--touch-min);
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: transparent;
+  color: #a8a8a8;
+  font-family: var(--font-sans);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pf-nav-item[aria-current="page"],
+.pf-nav-item[data-active="true"] {
+  color: #ffffff;
+}
+
+.pf-nav-icon-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  background: transparent;
+  color: inherit;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.pf-nav-item[data-active="true"] .pf-nav-icon-circle {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+@media (max-width: 480px) {
+  .pf-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
