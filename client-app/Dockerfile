@@ -15,7 +15,8 @@ LABEL org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0"
 
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY package.json ./
+COPY package.json vite.config.js index.html ./
+COPY public/ ./public/
 COPY src/ ./src/
 
 EXPOSE 5173

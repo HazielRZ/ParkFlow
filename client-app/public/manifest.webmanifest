@@ -1,0 +1,21 @@
+{
+  "name": "ParkFlow ITM — Monitoreo de Estacionamiento",
+  "short_name": "ParkFlow",
+  "description": "Disponibilidad de cajones de estacionamiento en tiempo real para el Instituto Tecnológico de Morelia (TecNM).",
+  "lang": "es-MX",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "categories": ["navigation", "utilities", "education"],
+  "icons": [
+    {
+      "src": "/icons/parkflow-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

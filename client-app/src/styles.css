@@ -1,0 +1,398 @@
+:root {
+  --bg-primary: #0f172a;
+  --bg-card: #1e293b;
+  --bg-elevated: #334155;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --border-subtle: #334155;
+  --accent-blue: #38bdf8;
+  --state-free: #16a34a;
+  --state-free-bg: rgba(22, 163, 74, 0.16);
+  --state-maneuver: #d97706;
+  --state-maneuver-bg: rgba(217, 119, 6, 0.18);
+  --state-occupied: #dc2626;
+  --state-occupied-bg: rgba(220, 38, 38, 0.18);
+  --touch-min: 44px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+}
+
+.pf-app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: max(0.75rem, env(safe-area-inset-top))
+    max(0.875rem, env(safe-area-inset-right))
+    max(1.25rem, env(safe-area-inset-bottom))
+    max(0.875rem, env(safe-area-inset-left));
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+/* Header & Connection Pill */
+.pf-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 0.875rem 1rem;
+}
+
+.pf-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pf-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.pf-brand-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #0284c7;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 1.125rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pf-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.pf-subtitle {
+  margin: 0.125rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.pf-conn-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.pf-conn-badge[data-status="online"] {
+  background: var(--state-free-bg);
+  color: #4ade80;
+  border-color: var(--state-free);
+}
+
+.pf-conn-badge[data-status="reconnecting"] {
+  background: var(--state-maneuver-bg);
+  color: #fbbf24;
+  border-color: var(--state-maneuver);
+}
+
+.pf-conn-badge[data-status="demo"] {
+  background: rgba(56, 189, 248, 0.16);
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+.pf-conn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Banners: Saturation Alert (RF-04) & Demo Banner */
+.pf-alert-saturation {
+  background: rgba(220, 38, 38, 0.22);
+  border: 2px solid #ef4444;
+  color: #fecaca;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.pf-demo-banner {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px dashed var(--accent-blue);
+  color: var(--text-primary);
+  padding: 0.625rem 0.875rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.8125rem;
+}
+
+.pf-demo-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Controls: Zone selector & State filters (min 44x44px touch target) */
+.pf-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.pf-zone-bar {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.15rem;
+}
+
+.pf-btn,
+.pf-zone-tab,
+.pf-filter-chip {
+  min-height: var(--touch-min);
+  min-width: var(--touch-min);
+  padding: 0.5rem 0.875rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.pf-zone-tab[aria-pressed="true"],
+.pf-filter-chip[aria-pressed="true"] {
+  background: #0284c7;
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+.pf-btn-secondary {
+  background: var(--bg-elevated);
+  font-size: 0.78rem;
+  padding: 0.4rem 0.75rem;
+}
+
+/* Live Metrics Strip */
+.pf-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.pf-metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 0.625rem 0.5rem;
+  text-align: center;
+}
+
+.pf-metric-card[data-variant="free"] {
+  border-bottom: 4px solid var(--state-free);
+}
+
+.pf-metric-card[data-variant="maneuver"] {
+  border-bottom: 4px solid var(--state-maneuver);
+}
+
+.pf-metric-card[data-variant="occupied"] {
+  border-bottom: 4px solid var(--state-occupied);
+}
+
+.pf-metric-card[data-variant="ratio"] {
+  border-bottom: 4px solid var(--accent-blue);
+}
+
+.pf-metric-value {
+  display: block;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.pf-metric-label {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+/* Filter bar */
+.pf-filter-bar {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.15rem;
+}
+
+/* Interactive SVG Map Container */
+.pf-map-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.pf-map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pf-map-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.pf-legend {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.pf-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.pf-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.pf-svg-wrapper {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #0b1120;
+  border: 1px solid #1e293b;
+}
+
+.pf-svg-canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.pf-slot-group {
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.pf-slot-group:focus-visible {
+  outline: 3px solid #38bdf8;
+  outline-offset: 2px;
+}
+
+/* Selected Slot Detail Sheet / Card */
+.pf-detail-sheet {
+  background: #172554;
+  border: 2px solid var(--accent-blue);
+  border-radius: 14px;
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.pf-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.pf-detail-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.pf-state-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.pf-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 0.75rem;
+  font-size: 0.82rem;
+}
+
+.pf-detail-item strong {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+@media (max-width: 480px) {
+  .pf-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
