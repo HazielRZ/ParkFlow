@@ -94,8 +94,11 @@ def test_sobrescritura_manual_bloquea_inferencia_hasta_liberacion() -> None:
         json=_payload_inferencia("Libre", frame_sequence=2),
     )
     assert r_cv.status_code == 202, r_cv.text
-    assert r_cv.json()["metrics"]["locked_slots"] == 1
-    assert r_cv.json()["metrics"]["occupied"] == 1
+    servicio = client.app.state.parking_state_service
+    assert servicio.obtener_cajon(LOTE, POLIGONO).state == "Obras"
+    resumen = servicio.get_lot_summary(LOTE)
+    assert resumen["locked_slots"] == 1
+    assert resumen["occupied"] == 1
 
     # 3. Liberar bloqueo manual
     r_unlock = client.post(
