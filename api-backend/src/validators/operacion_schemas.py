@@ -38,3 +38,28 @@ class CalibracionCajonesRequest(BaseModel):
                 "(el rango intermedio corresponde a 'En maniobra')"
             )
         return self
+
+class PulsoBarreraRequest(BaseModel):
+    """Evento físico de entrada/salida desde sensores o plumas vehiculares (INT-HW-02)."""
+
+    parking_lot_id: str = Field(min_length=1)
+    barrier_id: str = Field(min_length=1, max_length=64)
+    evento: Literal["ENTRADA", "SALIDA"]
+    timestamp: Optional[str] = None
+
+
+class SobrescrituraManualRequest(BaseModel):
+    """Forzado manual de estado con bloqueo ante inferencia CV (RF-03)."""
+
+    parking_lot_id: str = Field(min_length=1)
+    polygon_id: str = Field(min_length=1)
+    estado: Literal["Libre", "Ocupado", "Reservado", "Obras", "Emergencia"]
+    motivo: str = Field(min_length=3, max_length=255)
+
+
+class LiberarBloqueoRequest(BaseModel):
+    """Libera el bloqueo manual de un cajón para devolver el control a /cv-service."""
+
+    parking_lot_id: str = Field(min_length=1)
+    polygon_id: str = Field(min_length=1)
+    motivo: str = Field(default="Liberación manual", min_length=3, max_length=255)
