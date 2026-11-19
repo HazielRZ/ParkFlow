@@ -22,15 +22,18 @@
   --bg-input: #f6f6f6;
   --bg-nav: #010101;
   --text-primary: #010101;
-  --text-muted: #797979;
+  --text-muted: #666666;
   --border-subtle: #e0e0e0;
 
   /* Semantic Status (INT-SW-01 / INT-UI-01) */
   --status-success: #16a34a;
+  --status-success-text: #15803d;
   --status-success-bg: #dcfce7;
   --status-warning: #ea580c;
+  --status-warning-text: #b45309;
   --status-warning-bg: #ffedd5;
   --status-danger: #dc2626;
+  --status-danger-text: #b91c1c;
   --status-danger-bg: #fee2e2;
 
   /* SVG Map Surface Tokens (Light) */
@@ -54,20 +57,26 @@
   --accent: #1b396a;
   --accent-hover: #254b8a;
   --accent-soft: rgba(75, 123, 229, 0.18);
-  --accent-text: #4b7be5;
+  --accent-text: #5b8def;
   --accent-border: #4b7be5;
 
   --bg-app: #121212;
   --bg-surface: #2c2c2c;
-  --bg-input: #2c2c2c;
+  --bg-input: #222222;
   --bg-nav: #2c2c2c;
   --text-primary: #ffffff;
   --text-muted: #a8a8a8;
   --border-subtle: #3a3a3a;
 
+  --status-success: #4ade80;
+  --status-success-text: #4ade80;
   --status-success-bg: rgba(22, 163, 74, 0.18);
+  --status-warning: #fb923c;
+  --status-warning-text: #fdba74;
   --status-warning-bg: rgba(234, 88, 12, 0.18);
-  --status-danger-bg: rgba(220, 38, 38, 0.2);
+  --status-danger: #f87171;
+  --status-danger-text: #fca5a5;
+  --status-danger-bg: rgba(220, 38, 38, 0.22);
 
   /* SVG Map Surface Tokens (Dark) */
   --map-canvas-bg: #181818;
@@ -77,7 +86,7 @@
   --map-car-cabin: #4b5563;
   --map-car-window: #9ca3af;
 
-  /* Regla 6: Elevación tonal sin sombras en Dark Mode */
+  /* Elevación tonal plana sin sombras en Dark Mode */
   --shadow-float: none;
   --shadow-card: none;
 }
