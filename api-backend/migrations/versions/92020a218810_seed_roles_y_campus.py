@@ -18,16 +18,31 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-def upgrade():
+ROLE_NAMES = [
+    "Administrador",
+    "Vigilancia",
+    "Estudiante",
+    "Tech Lead",
+    "DevOps/QA",
+    "Desarrollador",
+    "Invitado",
+]
+CAMPUS_CODES = ["ITM-CAMPUS1", "ITM-CAMPUS2"]
+
+
+def upgrade() -> None:
     roles = sa.table("roles", sa.column("name", sa.String))
-    op.bulk_insert(roles, [{"name": n} for n in
-        ["Administrador", "Vigilancia", "Estudiante", "Tech Lead", "Desarrollador"]])
+    op.bulk_insert(roles, [{"name": n} for n in ROLE_NAMES])
     campuses = sa.table("campuses", sa.column("code", sa.String), sa.column("name", sa.String))
     op.bulk_insert(campuses, [
         {"code": "ITM-CAMPUS1", "name": "Campus 1"},
         {"code": "ITM-CAMPUS2", "name": "Campus 2"},
     ])
 
-def downgrade():
-    op.execute("DELETE FROM campuses WHERE code IN ('ITM-CAMPUS1','ITM-CAMPUS2')")
-    op.execute("DELETE FROM roles")
+
+def downgrade() -> None:
+    """Downgrade schema."""
+    campuses = sa.table("campuses", sa.column("code", sa.String))
+    op.execute(campuses.delete().where(campuses.c.code.in_(CAMPUS_CODES)))
+    roles = sa.table("roles", sa.column("name", sa.String))
+    op.execute(roles.delete().where(roles.c.name.in_(ROLE_NAMES)))

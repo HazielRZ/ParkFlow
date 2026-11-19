@@ -1,34 +1,110 @@
-"""Pruebas de autenticación institucional y RBAC (RNF-02)."""
+"""Pruebas de autenticación institucional y RBAC (RNF-02 / PF-16)."""
 
+import pytest
 from fastapi.testclient import TestClient
 
 from src.main import create_app
+from src.models.usuario import RolEnum
 from src.services.audit_service import auditoria_service
 
-CREDENCIALES_ADMIN = {"correo": "admin@morelia.tecnm.mx", "password": "Admin123*"}
-CREDENCIALES_VIGILANCIA = {"correo": "vigilancia@morelia.tecnm.mx", "password": "Vigila123*"}
-CREDENCIALES_DESARROLLADOR = {"correo": "l23121070@morelia.tecnm.mx", "password": "Dev123*"}
+# Un usuario semilla por rol (ver `_construir_repositorio_demo` en `src/models/usuario.py`).
+CREDENCIALES_POR_ROL = {
+    RolEnum.ADMINISTRADOR: {"correo": "admin@morelia.tecnm.mx", "password": "Admin123*"},
+    RolEnum.VIGILANCIA: {"correo": "vigilancia@morelia.tecnm.mx", "password": "Vigila123*"},
+    RolEnum.DESARROLLADOR: {"correo": "l23121070@morelia.tecnm.mx", "password": "Dev123*"},
+    RolEnum.TECH_LEAD: {"correo": "techlead@morelia.tecnm.mx", "password": "TechLead123*"},
+    RolEnum.DEVOPS_QA: {"correo": "devops.qa@morelia.tecnm.mx", "password": "DevOpsQA123*"},
+    RolEnum.ESTUDIANTE: {"correo": "estudiante@morelia.tecnm.mx", "password": "Estudiante123*"},
+    RolEnum.INVITADO: {"correo": "invitado@morelia.tecnm.mx", "password": "Invitado123*"},
+}
+
+LOTE = "ITM-CAMPUS1-EST-NORTE"
+POLIGONO = "poly-itm-001"
+
+ENDPOINTS_PROTEGIDOS = {
+    "calibracion": (
+        "/api/calibracion/cajones",
+        {"parking_lot_id": LOTE, "polygon_id": POLIGONO, "umbral_iou_libre": 0.2, "umbral_iou_ocupado": 0.5},
+    ),
+    "registro_manual": (
+        "/api/accesos/registro-manual",
+        {"parking_lot_id": LOTE, "polygon_id": POLIGONO, "placa": "ABC-123", "estado": "Ocupado"},
+    ),
+}
+
+# Matriz de permisos esperada (mínimo privilegio). Se escribe a mano a propósito,
+# sin importarla de las rutas: si alguien cambia los roles de un endpoint, esta
+# prueba debe fallar y obligar a revisar el cambio.
+ROLES_PERMITIDOS = {
+    "calibracion": {RolEnum.ADMINISTRADOR},
+    "registro_manual": {RolEnum.ADMINISTRADOR, RolEnum.VIGILANCIA},
+}
+
+CASOS_MATRIZ = [(endpoint, rol) for endpoint in ENDPOINTS_PROTEGIDOS for rol in RolEnum]
+
+
+def _registrar_cajon(client: TestClient) -> None:
+    """Da de alta el cajón de prueba vía inferencia (los endpoints responden 404 si no existe)."""
+    respuesta = client.post(
+        "/api/v1/inference/states",
+        json={
+            "camera_id": "e6f4776b-3122-4a0b-857e-3c22db92dcb1",
+            "parking_lot_id": LOTE,
+            "timestamp": "2026-10-27T18:30:00Z",
+            "frame_sequence": 1,
+            "polygons": [
+                {
+                    "polygon_id": POLIGONO,
+                    "slot_name": "C-01",
+                    "state": "Libre",
+                    "confidence": 0.9,
+                    "iou_ratio": 0.05,
+                    "vehicle_type": None,
+                }
+            ],
+        },
+    )
+    assert respuesta.status_code == 202, respuesta.text
 
 
 def _auth_header(client: TestClient, credenciales: dict) -> dict:
     respuesta = client.post("/api/auth/login", json=credenciales)
+    assert respuesta.status_code == 200, respuesta.text
     token = respuesta.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_login_rechaza_correo_no_institucional() -> None:
+def test_login_rechaza_correo_no_institucional_y_lo_audita() -> None:
     client = TestClient(create_app())
+    total_logs_previos = len(auditoria_service.registros)
+
     respuesta = client.post(
         "/api/auth/login", json={"correo": "hacker@gmail.com", "password": "x"}
     )
+
     assert respuesta.status_code == 422
+    assert respuesta.json()["detail"][0]["type"] == "dominio_no_institucional"
+    assert len(auditoria_service.registros) == total_logs_previos + 1
+    registro = auditoria_service.registros[-1]
+    assert registro.accion == "LOGIN_RECHAZADO_DOMINIO:correo=hacker@gmail.com"
+    assert registro.id_usuario is None
+
+
+def test_login_con_correo_mal_formado_no_se_audita_como_rechazo_de_dominio() -> None:
+    client = TestClient(create_app())
+    total_logs_previos = len(auditoria_service.registros)
+
+    respuesta = client.post("/api/auth/login", json={"correo": "no-es-un-correo", "password": "x"})
+
+    assert respuesta.status_code == 422
+    assert len(auditoria_service.registros) == total_logs_previos
 
 
 def test_login_exitoso_retorna_jwt_y_registra_auditoria() -> None:
     client = TestClient(create_app())
     total_logs_previos = len(auditoria_service.registros)
 
-    respuesta = client.post("/api/auth/login", json=CREDENCIALES_ADMIN)
+    respuesta = client.post("/api/auth/login", json=CREDENCIALES_POR_ROL[RolEnum.ADMINISTRADOR])
 
     assert respuesta.status_code == 200
     cuerpo = respuesta.json()
@@ -38,73 +114,78 @@ def test_login_exitoso_retorna_jwt_y_registra_auditoria() -> None:
     assert auditoria_service.registros[-1].accion == "LOGIN_EXITOSO"
 
 
-def test_login_credenciales_incorrectas_retorna_401() -> None:
+def test_login_password_incorrecto_retorna_401_y_audita_la_cuenta() -> None:
     client = TestClient(create_app())
+    total_logs_previos = len(auditoria_service.registros)
+
     respuesta = client.post(
         "/api/auth/login",
         json={"correo": "admin@morelia.tecnm.mx", "password": "incorrecta"},
     )
+
     assert respuesta.status_code == 401
+    assert len(auditoria_service.registros) == total_logs_previos + 1
+    registro = auditoria_service.registros[-1]
+    assert registro.accion == "LOGIN_FALLIDO:correo=admin@morelia.tecnm.mx"
+    assert registro.id_usuario == 1
 
 
-def test_calibracion_cajones_permite_administrador() -> None:
+def test_login_correo_no_registrado_retorna_401_y_audita_sin_usuario() -> None:
     client = TestClient(create_app())
-    headers = _auth_header(client, CREDENCIALES_ADMIN)
-
-    respuesta = client.post(
-        "/api/calibracion/cajones",
-        json={"id_cajon": 5, "umbral_ocupado_cm": 12.5},
-        headers=headers,
-    )
-
-    assert respuesta.status_code == 200
-
-
-def test_calibracion_cajones_rechaza_rol_sin_permiso() -> None:
-    client = TestClient(create_app())
-    headers = _auth_header(client, CREDENCIALES_DESARROLLADOR)
     total_logs_previos = len(auditoria_service.registros)
 
     respuesta = client.post(
-        "/api/calibracion/cajones",
-        json={"id_cajon": 5, "umbral_ocupado_cm": 12.5},
-        headers=headers,
+        "/api/auth/login",
+        json={"correo": "noexiste@morelia.tecnm.mx", "password": "x"},
     )
 
-    assert respuesta.status_code == 403
-    assert len(auditoria_service.registros) == total_logs_previos + 1
-    assert auditoria_service.registros[-1].accion.startswith("ACCESO_DENEGADO")
-
-
-def test_calibracion_cajones_sin_token_retorna_401() -> None:
-    client = TestClient(create_app())
-    respuesta = client.post(
-        "/api/calibracion/cajones", json={"id_cajon": 5, "umbral_ocupado_cm": 12.5}
-    )
     assert respuesta.status_code == 401
+    assert respuesta.json()["detail"] == "Correo o contraseña incorrectos"
+    assert len(auditoria_service.registros) == total_logs_previos + 1
+    registro = auditoria_service.registros[-1]
+    assert registro.accion == "LOGIN_FALLIDO:correo=noexiste@morelia.tecnm.mx"
+    assert registro.id_usuario is None
 
 
-def test_registro_manual_permite_vigilancia() -> None:
+@pytest.mark.parametrize("rol", list(RolEnum), ids=lambda rol: rol.name)
+def test_cada_rol_tiene_usuario_semilla_que_inicia_sesion(rol: RolEnum) -> None:
     client = TestClient(create_app())
-    headers = _auth_header(client, CREDENCIALES_VIGILANCIA)
 
-    respuesta = client.post(
-        "/api/accesos/registro-manual",
-        json={"placa": "ABC-123", "id_cajon": 3},
-        headers=headers,
-    )
+    respuesta = client.post("/api/auth/login", json=CREDENCIALES_POR_ROL[rol])
 
     assert respuesta.status_code == 200
+    assert respuesta.json()["rol"] == rol.value
 
 
-def test_registro_manual_rechaza_estudiante() -> None:
+@pytest.mark.parametrize(
+    ("endpoint", "rol"),
+    CASOS_MATRIZ,
+    ids=[f"{endpoint}-{rol.name}" for endpoint, rol in CASOS_MATRIZ],
+)
+def test_matriz_de_permisos_por_rol(endpoint: str, rol: RolEnum) -> None:
     client = TestClient(create_app())
-    headers = _auth_header(client, CREDENCIALES_DESARROLLADOR)
+    _registrar_cajon(client)
+    headers = _auth_header(client, CREDENCIALES_POR_ROL[rol])
+    ruta, payload = ENDPOINTS_PROTEGIDOS[endpoint]
+    total_logs_previos = len(auditoria_service.registros)
 
-    respuesta = client.post(
-        "/api/accesos/registro-manual",
-        json={"placa": "ABC-123", "id_cajon": 3},
-        headers=headers,
-    )
+    respuesta = client.post(ruta, json=payload, headers=headers)
 
-    assert respuesta.status_code == 403
+    acciones_nuevas = [r.accion for r in auditoria_service.registros[total_logs_previos:]]
+    if rol in ROLES_PERMITIDOS[endpoint]:
+        assert respuesta.status_code == 200, respuesta.text
+        assert acciones_nuevas
+        assert not any(a.startswith("ACCESO_DENEGADO") for a in acciones_nuevas)
+    else:
+        assert respuesta.status_code == 403
+        assert acciones_nuevas == [f"ACCESO_DENEGADO:rol={rol.value}"]
+
+
+@pytest.mark.parametrize("endpoint", list(ENDPOINTS_PROTEGIDOS))
+def test_endpoint_protegido_sin_token_retorna_401(endpoint: str) -> None:
+    client = TestClient(create_app())
+    ruta, payload = ENDPOINTS_PROTEGIDOS[endpoint]
+
+    respuesta = client.post(ruta, json=payload)
+
+    assert respuesta.status_code == 401

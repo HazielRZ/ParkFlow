@@ -120,7 +120,11 @@ INSERT INTO roles (name) VALUES ('Estudiante');
 
 INSERT INTO roles (name) VALUES ('Tech Lead');
 
+INSERT INTO roles (name) VALUES ('DevOps/QA');
+
 INSERT INTO roles (name) VALUES ('Desarrollador');
+
+INSERT INTO roles (name) VALUES ('Invitado');
 
 INSERT INTO campuses (code, name) VALUES ('ITM-CAMPUS1', 'Campus 1');
 

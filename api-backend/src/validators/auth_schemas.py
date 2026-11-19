@@ -3,10 +3,20 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, EmailStr, field_validator
+from pydantic_core import PydanticCustomError
 
 from src.models.usuario import RolEnum
 
 DOMINIO_INSTITUCIONAL = "@morelia.tecnm.mx"
+
+# Tipo de error propio para distinguir el rechazo por dominio de un correo mal
+# formado; `auth_routes` lo usa para auditar el intento.
+ERROR_DOMINIO_NO_INSTITUCIONAL = "dominio_no_institucional"
+
+
+def es_correo_institucional(correo: str) -> bool:
+    """Regla única de RNF-02, usada en el login y al revalidar el JWT."""
+    return correo.lower().endswith(DOMINIO_INSTITUCIONAL)
 
 
 class UsuarioLogin(BaseModel):
@@ -18,10 +28,11 @@ class UsuarioLogin(BaseModel):
     @field_validator("correo")
     @classmethod
     def validar_dominio_institucional(cls, v: EmailStr) -> EmailStr:
-        if not str(v).lower().endswith(DOMINIO_INSTITUCIONAL):
-            raise ValueError(
+        if not es_correo_institucional(str(v)):
+            raise PydanticCustomError(
+                ERROR_DOMINIO_NO_INSTITUCIONAL,
                 f"Acceso denegado: solo se permite correo institucional "
-                f"'{DOMINIO_INSTITUCIONAL}' (RNF-02)"
+                f"'{DOMINIO_INSTITUCIONAL}' (RNF-02)",
             )
         return v
 
@@ -41,13 +52,3 @@ class UsuarioOut(BaseModel):
     id_usuario: int
     correo: EmailStr
     rol: RolEnum
-
-
-class CalibracionCajonesRequest(BaseModel):
-    id_cajon: int
-    umbral_ocupado_cm: float
-
-
-class AccesoManualRequest(BaseModel):
-    placa: str
-    id_cajon: int
