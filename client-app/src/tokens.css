@@ -44,6 +44,12 @@
   --map-car-cabin: #6b7280;
   --map-car-window: #e5e7eb;
 
+  /* Guidance & Assignment Tokens (Light) */
+  --guidance-route: #1b396a;
+  --guidance-route-glow: rgba(27, 57, 106, 0.22);
+  --guidance-spot-bg: #dbe7fb;
+  --guidance-spot-border: #1b396a;
+
   /* Geometry & Elevation */
   --radius-card: 20px;
   --radius-input: 12px;
@@ -85,6 +91,12 @@
   --map-car-body: #6b7280;
   --map-car-cabin: #4b5563;
   --map-car-window: #9ca3af;
+
+  /* Guidance & Assignment Tokens (Dark) */
+  --guidance-route: #5b8def;
+  --guidance-route-glow: rgba(91, 141, 239, 0.28);
+  --guidance-spot-bg: rgba(75, 123, 229, 0.24);
+  --guidance-spot-border: #5b8def;
 
   /* Elevación tonal plana sin sombras en Dark Mode */
   --shadow-float: none;

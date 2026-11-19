@@ -75,6 +75,32 @@ export function buildAvailabilityAnnouncement({
   return `${lot.name}. ${metrics.free} ${metrics.free === 1 ? "cajón libre" : "cajones libres"}${maneuverText}.${bestZoneText}`;
 }
 
+export function buildGuidanceAnnouncement({
+  assignment,
+  route,
+  remainingMs = 0,
+  conflict = false,
+} = {}) {
+  if (!assignment) {
+    return "No hay un cajón asignado en este momento.";
+  }
+
+  if (conflict) {
+    return `Atención: la cámara detectó un vehículo ocupando el cajón ${assignment.slot_name} en ${assignment.zone_name}. Si ya te estacionaste, pulsa Ya me estacioné; de lo contrario, pulsa Reasignar otro lugar.`;
+  }
+
+  const mins = Math.max(1, Math.ceil((remainingMs || 0) / 60000));
+  const minLabel = mins === 1 ? "1 minuto" : `${mins} minutos`;
+  const lotLabel = assignment.lot_name || assignment.lot_short_name || "estacionamiento";
+  const stepsText = Array.isArray(route?.steps) && route.steps.length > 0
+    ? route.steps
+        .map((step, idx) => `Paso ${idx + 1}: ${step.title}. ${step.description}`)
+        .join(" ")
+    : route?.summary || "";
+
+  return `Cajón asignado ${assignment.slot_name} en ${lotLabel}, zona ${assignment.zone_name}. Tienes ${minLabel} antes de que caduque. ${stepsText}`.trim();
+}
+
 export function stopAvailabilitySpeech() {
   if (!isSpeechSupported()) {
     return;

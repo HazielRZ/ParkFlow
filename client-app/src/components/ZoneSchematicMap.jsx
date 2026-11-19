@@ -43,6 +43,8 @@ function getRoadReferenceText(lot) {
 export function ZoneSchematicMap({
   lot,
   bestZoneId = null,
+  assignedZoneId = null,
+  assignedSlotName = null,
   userRole = "student",
   technicalMode = false,
   onSelectZone,
@@ -106,6 +108,7 @@ export function ZoneSchematicMap({
         {zones.map((zone) => {
           const traffic = getZoneTrafficLight(zone);
           const isBest = Boolean(bestZoneId && zone.id === bestZoneId);
+          const isAssignedZone = Boolean(assignedZoneId && zone.id === assignedZoneId);
           const occPct = Math.round((zone.occupancy_ratio || 0) * 100);
           const orientation =
             lot.layout_type === "linear" || lot.layout_type === "compact"
@@ -123,8 +126,13 @@ export function ZoneSchematicMap({
               data-slot={zone.layout_slot || "center"}
               data-traffic={traffic}
               data-recommended={String(isBest && !isRestricted)}
+              data-assigned={isAssignedZone ? "true" : undefined}
               data-restricted={String(isRestricted)}
               aria-label={`Zona ${zone.name}, ${zone.landmark}, ${zone.free_count} libres de ${zone.total_count}, estado ${TRAFFIC_LABELS[traffic]}${
+                isAssignedZone && assignedSlotName
+                  ? `, tu cajón asignado ${assignedSlotName}`
+                  : ""
+              }${
                 zone.maneuver_count > 0
                   ? `, ${zone.maneuver_count} en maniobra`
                   : ""
@@ -135,6 +143,11 @@ export function ZoneSchematicMap({
                 <div className="pf-zone-block-badges">
                   {orientation && (
                     <span className="pf-zone-orient-tag">{orientation}</span>
+                  )}
+                  {isAssignedZone && (
+                    <span className="pf-zone-assigned-tag">
+                      🧭 Tu lugar{assignedSlotName ? `: ${assignedSlotName}` : ""}
+                    </span>
                   )}
                   {isBest && !isRestricted && (
                     <span className="pf-zone-best-tag">★ Mejor</span>

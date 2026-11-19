@@ -48,7 +48,7 @@ export const VEHICLE_LABELS = {
  * Distribuye los cajones en 2 bloques laterales (A a la izquierda, B a la derecha)
  * separados por el carril central vertical.
  */
-function computeCentralLaneSlotGeometry(index) {
+export function computeCentralLaneSlotGeometry(index) {
   const isRightBlock = index % 2 === 1;
   const row = Math.floor(index / 2);
 
@@ -122,6 +122,9 @@ export function ParkingGrid({
   laneLabel = "ENTRADA ITM",
   cameraId = null,
   technicalMode = false,
+  assignedPolygonId = null,
+  showGuidancePath = false,
+  assignmentConflict = false,
 }) {
   const [internalSelectedId, setInternalSelectedId] = useState(null);
   const activeSelectedId =
@@ -151,6 +154,12 @@ export function ParkingGrid({
     ? polygons.find((item) => item.polygon_id === activeSelectedId) || null
     : null;
   const technicalSlot = explicitSlot || polygons[0] || null;
+
+  const assignedIndex = assignedPolygonId
+    ? polygons.findIndex((item) => item.polygon_id === assignedPolygonId)
+    : -1;
+  const assignedGeom =
+    assignedIndex >= 0 ? computeCentralLaneSlotGeometry(assignedIndex) : null;
 
   const rowsCount = Math.max(1, Math.ceil(polygons.length / 2));
   const svgHeight = Math.max(320, 54 + rowsCount * 82 + 28);
@@ -279,22 +288,36 @@ export function ParkingGrid({
           {polygons.map((slot, index) => {
             const geom = computeCentralLaneSlotGeometry(index);
             const cfg = STATE_CONFIG[slot.state] || STATE_CONFIG.Libre;
+            const isAssigned = Boolean(
+              assignedPolygonId && slot.polygon_id === assignedPolygonId
+            );
+            const isAssignedConflict = isAssigned && assignmentConflict;
             const matchesFilter =
-              stateFilter === "Todos" || slot.state === stateFilter;
+              stateFilter === "Todos" || slot.state === stateFilter || isAssigned;
             const isSelected = activeSelectedId === slot.polygon_id;
 
-            const slotFill = isSelected
-              ? "var(--accent-soft)"
-              : "var(--map-slot-bg)";
-            const slotStroke = isSelected
-              ? "var(--accent-border)"
-              : slot.state === "En maniobra"
-                ? "#d97706"
-                : "var(--border-subtle)";
-            const slotStrokeWidth = isSelected ? "2" : "1.5";
+            const slotFill = isAssignedConflict
+              ? "var(--status-danger-bg)"
+              : isAssigned
+                ? "var(--guidance-spot-bg)"
+                : isSelected
+                  ? "var(--accent-soft)"
+                  : "var(--map-slot-bg)";
+            const slotStroke = isAssignedConflict
+              ? "var(--status-danger)"
+              : isAssigned
+                ? "var(--guidance-spot-border)"
+                : isSelected
+                  ? "var(--accent-border)"
+                  : slot.state === "En maniobra"
+                    ? "#d97706"
+                    : "var(--border-subtle)";
+            const slotStrokeWidth =
+              isAssigned || isSelected ? "2.5" : "1.5";
             const ariaDetail = technicalMode
               ? `, confianza ${Math.round((slot.confidence || 0) * 100)} por ciento`
               : "";
+            const ariaAssigned = isAssigned ? ", tu cajón asignado" : "";
 
             return (
               <g
@@ -302,9 +325,10 @@ export function ParkingGrid({
                 className="pf-slot-group"
                 role="button"
                 tabIndex={0}
-                aria-label={`Cajón ${slot.slot_name}, estado ${slot.state}${ariaDetail}`}
+                aria-label={`Cajón ${slot.slot_name}, estado ${slot.state}${ariaAssigned}${ariaDetail}`}
                 aria-pressed={isSelected}
                 data-slot-state={slot.state}
+                data-assigned={isAssigned ? "true" : undefined}
                 data-polygon-id={slot.polygon_id}
                 style={{ opacity: matchesFilter ? 1 : 0.22 }}
                 onClick={() => handleSelect(slot)}
@@ -324,10 +348,64 @@ export function ParkingGrid({
                   fill={slotFill}
                   stroke={slotStroke}
                   strokeWidth={slotStrokeWidth}
-                  strokeDasharray={isSelected ? "none" : cfg.dashArray}
+                  strokeDasharray={
+                    isAssignedConflict
+                      ? "6 4"
+                      : isAssigned || isSelected
+                        ? "none"
+                        : cfg.dashArray
+                  }
                 />
 
-                {slot.state === "Ocupado" ? (
+                {isAssigned && !isAssignedConflict ? (
+                  <>
+                    <text
+                      x={geom.x + geom.width / 2}
+                      y={geom.y + 32}
+                      textAnchor="middle"
+                      fill="var(--accent-text)"
+                      fontSize="19"
+                      fontWeight="800"
+                    >
+                      {slot.slot_name}
+                    </text>
+                    <text
+                      x={geom.x + geom.width / 2}
+                      y={geom.y + 52}
+                      textAnchor="middle"
+                      fill="var(--guidance-route)"
+                      fontSize="10.5"
+                      fontWeight="800"
+                    >
+                      {slot.state === "En maniobra"
+                        ? "★ TU LUGAR • MANIOBRA"
+                        : "★ TU LUGAR"}
+                    </text>
+                  </>
+                ) : isAssignedConflict && slot.state !== "Ocupado" ? (
+                  <>
+                    <text
+                      x={geom.x + geom.width / 2}
+                      y={geom.y + 32}
+                      textAnchor="middle"
+                      fill="var(--text-primary)"
+                      fontSize="18"
+                      fontWeight="800"
+                    >
+                      {slot.slot_name}
+                    </text>
+                    <text
+                      x={geom.x + geom.width / 2}
+                      y={geom.y + 52}
+                      textAnchor="middle"
+                      fill="var(--status-danger)"
+                      fontSize="10.5"
+                      fontWeight="800"
+                    >
+                      ⚠ CONFLICTO
+                    </text>
+                  </>
+                ) : slot.state === "Ocupado" ? (
                   <>
                     {renderTopDownCarSvg(geom.x, geom.y, geom.width)}
                     <text
@@ -347,7 +425,7 @@ export function ParkingGrid({
                       fontSize="10"
                       fontWeight="700"
                     >
-                      ✕ OCUPADO
+                      {isAssignedConflict ? "⚠ OCUPADO" : "✕ OCUPADO"}
                     </text>
                   </>
                 ) : slot.state === "En maniobra" ? (
@@ -402,6 +480,73 @@ export function ParkingGrid({
               </g>
             );
           })}
+
+          {/* Trayectoria animada desde la entrada del carril hasta el cajón asignado */}
+          {showGuidancePath && assignedGeom && (() => {
+            const laneX = 270;
+            const centerY = assignedGeom.y + assignedGeom.height / 2;
+            const curveRadius = 22;
+            const turnStartY = Math.max(54, centerY - curveRadius);
+            const endX = assignedGeom.isRightBlock
+              ? assignedGeom.x - 4
+              : assignedGeom.x + assignedGeom.width + 4;
+            const curveEndX = assignedGeom.isRightBlock
+              ? laneX + curveRadius
+              : laneX - curveRadius;
+            const pathD = `M ${laneX} 46 L ${laneX} ${turnStartY} Q ${laneX} ${centerY} ${curveEndX} ${centerY} L ${endX} ${centerY}`;
+            const arrowD = assignedGeom.isRightBlock
+              ? `M ${endX - 9} ${centerY - 6} L ${endX} ${centerY} L ${endX - 9} ${centerY + 6}`
+              : `M ${endX + 9} ${centerY - 6} L ${endX} ${centerY} L ${endX + 9} ${centerY + 6}`;
+            const beaconX = assignedGeom.isRightBlock
+              ? assignedGeom.x + 14
+              : assignedGeom.x + assignedGeom.width - 14;
+            const beaconY = assignedGeom.y + 14;
+            const routeStroke = assignmentConflict
+              ? "var(--status-danger)"
+              : "var(--guidance-route)";
+
+            return (
+              <g className="pf-guidance-overlay" aria-hidden="true">
+                <path
+                  d={pathD}
+                  className="pf-guidance-route-glow"
+                  fill="none"
+                  stroke={assignmentConflict ? "var(--status-danger-bg)" : "var(--guidance-route-glow)"}
+                  strokeWidth="12"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d={pathD}
+                  className="pf-guidance-route-path"
+                  fill="none"
+                  stroke={routeStroke}
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray="10 7"
+                />
+                <circle cx={laneX} cy={46} r="5" fill={routeStroke} />
+                <path
+                  d={arrowD}
+                  fill="none"
+                  stroke={routeStroke}
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                {!assignmentConflict && (
+                  <circle
+                    cx={beaconX}
+                    cy={beaconY}
+                    r="5"
+                    className="pf-spot-beacon"
+                    fill={routeStroke}
+                  />
+                )}
+              </g>
+            );
+          })()}
         </svg>
       </div>
 

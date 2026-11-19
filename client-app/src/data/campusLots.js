@@ -329,6 +329,10 @@ export function groupSpotsByZone(flatSpots = [], zoneTemplates = []) {
         landmark: rawSpot.landmark || "Sector conectado en vivo",
         layout_slot: "center",
         laneLabel: "ENTRADA ITM",
+        approachDirection: "recto",
+        routeFromEntry: [
+          `Sigue la señalización desde el acceso principal hacia ${rawSpot.zone_name || `Zona ${targetZoneId}`}.`,
+        ],
       });
     }
 
@@ -376,6 +380,8 @@ export const CAMPUS_LOTS = [
     shortName: "C1 • Norte",
     name: "Campus 1 — Estacionamiento Norte",
     accessLabel: "Caseta Principal / C. Raza Maya",
+    entryGate: "Caseta Principal (C. Raza Maya)",
+    coordinates: { lat: 19.7235, lng: -101.1862 },
     campus: "Campus 1",
     layout_type: "l_shape",
     access_type: "general",
@@ -388,6 +394,10 @@ export const CAMPUS_LOTS = [
         landmark: "Frente a Edif. CH • Caseta",
         layout_slot: "top",
         laneLabel: "CASETA RAZA MAYA",
+        approachDirection: "recto",
+        routeFromEntry: [
+          "Cruza la Caseta Principal por C. Raza Maya y mantente en el acceso norte frente al Edificio CH.",
+        ],
         // Conserva los 12 polygon_id originales para compatibilidad con CV/backend
         spots: [
           buildSpot({ polygonId: "poly-itm-a01", zoneId: "C1N-Z1", slotName: "A-01", state: "Libre", confidence: 0.96, iouRatio: 0.04 }),
@@ -412,6 +422,10 @@ export const CAMPUS_LOTS = [
         landmark: "Edif. CH / Edif. C",
         layout_slot: "left",
         laneLabel: "PASILLO OESTE",
+        approachDirection: "izquierda",
+        routeFromEntry: [
+          "Avanza 30 m después de la Caseta Raza Maya y gira a la izquierda hacia Pasillo Oeste (Edif. CH / Edif. C).",
+        ],
         spots: generateZoneSpots({
           zoneId: "C1N-Z2",
           prefix: "O",
@@ -429,6 +443,10 @@ export const CAMPUS_LOTS = [
         landmark: "Edif. AG / Estadio",
         layout_slot: "right",
         laneLabel: "PASILLO ESTE",
+        approachDirection: "derecha",
+        routeFromEntry: [
+          "Avanza 30 m después de la Caseta Raza Maya y gira a la derecha rumbo al Edificio AG y Estadio.",
+        ],
         spots: generateZoneSpots({
           zoneId: "C1N-Z3",
           prefix: "E",
@@ -446,6 +464,10 @@ export const CAMPUS_LOTS = [
         landmark: "Edif. E / Canchas",
         layout_slot: "bottom",
         laneLabel: "FONDO SUR",
+        approachDirection: "recto",
+        routeFromEntry: [
+          "Sigue recto por el vial principal hasta Fondo Sur, junto al Edificio E y las canchas deportivas.",
+        ],
         spots: generateZoneSpots({
           zoneId: "C1N-Z4",
           prefix: "F",
@@ -462,6 +484,8 @@ export const CAMPUS_LOTS = [
     shortName: "C1 • Sur",
     name: "Campus 1 — Estacionamiento Sur",
     accessLabel: "Perif. Revolución / Auditorio",
+    entryGate: "Acceso Periférico Revolución",
+    coordinates: { lat: 19.7209, lng: -101.1856 },
     campus: "Campus 1",
     layout_type: "linear",
     access_type: "general",
@@ -474,6 +498,10 @@ export const CAMPUS_LOTS = [
         landmark: "Gimnasio Pony • Escaleras",
         layout_slot: "west",
         laneLabel: "ACCESO AUDITORIO",
+        approachDirection: "izquierda",
+        routeFromEntry: [
+          "Entra por Periférico Revolución y toma el sector oeste junto al Auditorio Heber Soto y Gimnasio Pony.",
+        ],
         spots: [
           buildSpot({ polygonId: "poly-sur-d01", zoneId: "C1S-Z1", slotName: "D-01", state: "Ocupado", confidence: 0.95, iouRatio: 0.82, vehicleType: "car" }),
           buildSpot({ polygonId: "poly-sur-d02", zoneId: "C1S-Z1", slotName: "D-02", state: "Ocupado", confidence: 0.93, iouRatio: 0.77, vehicleType: "car" }),
@@ -497,6 +525,10 @@ export const CAMPUS_LOTS = [
         landmark: "Edif. AC / AD • Periférico",
         layout_slot: "center",
         laneLabel: "CORREDOR CENTRAL",
+        approachDirection: "recto",
+        routeFromEntry: [
+          "Avanza recto por el corredor paralelo a Periférico Revolución frente a los edificios AC y AD.",
+        ],
         spots: generateZoneSpots({
           zoneId: "C1S-Z2",
           prefix: "M",
@@ -514,6 +546,10 @@ export const CAMPUS_LOTS = [
         landmark: "Talleres / Fondo",
         layout_slot: "east",
         laneLabel: "EXTREMO ESTE",
+        approachDirection: "derecha",
+        routeFromEntry: [
+          "Continúa hasta el extremo este del estacionamiento sur cerca de la zona de talleres.",
+        ],
         spots: generateZoneSpots({
           zoneId: "C1S-Z3",
           prefix: "T",
@@ -530,6 +566,8 @@ export const CAMPUS_LOTS = [
     shortName: "C1 • Edif. L",
     name: "Campus 1 — Edificio L",
     accessLabel: "Av. Tecnológico • Solo personal",
+    entryGate: "Acceso Av. Tecnológico (Edif. L)",
+    coordinates: { lat: 19.7224, lng: -101.1846 },
     campus: "Campus 1",
     layout_type: "compact",
     access_type: "staff_only",
@@ -542,6 +580,10 @@ export const CAMPUS_LOTS = [
         landmark: "Frente a Edif. L • Sec. Norte",
         layout_slot: "north",
         laneLabel: "AV. TECNOLÓGICO",
+        approachDirection: "recto",
+        routeFromEntry: [
+          "Ingresa por Av. Tecnológico con tu pase de personal hacia la sección norte frente al Edificio L.",
+        ],
         spots: generateZoneSpots({
           zoneId: "C1L-Z1",
           prefix: "L",
@@ -559,6 +601,10 @@ export const CAMPUS_LOTS = [
         landmark: "Lateral Edif. L / Oficinas",
         layout_slot: "south",
         laneLabel: "SECCIÓN SUR L",
+        approachDirection: "derecha",
+        routeFromEntry: [
+          "Rodea el lateral del Edificio L hacia la sección sur junto a las oficinas administrativas.",
+        ],
         spots: generateZoneSpots({
           zoneId: "C1L-Z2",
           prefix: "LS",
@@ -575,6 +621,8 @@ export const CAMPUS_LOTS = [
     shortName: "C2 • Central",
     name: "Campus 2 — Estacionamiento Central",
     accessLabel: "Acceso Principal Campus 2",
+    entryGate: "Caseta Principal Campus 2",
+    coordinates: { lat: 19.7366, lng: -101.1684 },
     campus: "Campus 2",
     layout_type: "linear",
     access_type: "general",
@@ -587,6 +635,10 @@ export const CAMPUS_LOTS = [
         landmark: "Caseta C2 / Edif. A",
         layout_slot: "west",
         laneLabel: "CASETA CAMPUS 2",
+        approachDirection: "recto",
+        routeFromEntry: [
+          "Pasa la Caseta Principal de Campus 2 e incorpórate de inmediato al sector frente al Edificio A.",
+        ],
         spots: [
           buildSpot({ polygonId: "poly-c2-n01", zoneId: "C2C-Z1", slotName: "N-01", state: "Libre", confidence: 0.97, iouRatio: 0.02 }),
           buildSpot({ polygonId: "poly-c2-n02", zoneId: "C2C-Z1", slotName: "N-02", state: "Libre", confidence: 0.96, iouRatio: 0.04 }),
@@ -610,6 +662,10 @@ export const CAMPUS_LOTS = [
         landmark: "Laboratorios / Edif. B",
         layout_slot: "center",
         laneLabel: "PASILLO CENTRAL C2",
+        approachDirection: "recto",
+        routeFromEntry: [
+          "Avanza recto por la vialidad principal de Campus 2 hacia el Pasillo Central frente a Laboratorios y Edificio B.",
+        ],
         spots: generateZoneSpots({
           zoneId: "C2C-Z2",
           prefix: "P",
@@ -627,6 +683,10 @@ export const CAMPUS_LOTS = [
         landmark: "Biblioteca / Explanada",
         layout_slot: "east",
         laneLabel: "ZONA PONIENTE C2",
+        approachDirection: "derecha",
+        routeFromEntry: [
+          "Continúa por la vialidad interna hasta la Zona Poniente, junto a Biblioteca y Explanada.",
+        ],
         spots: generateZoneSpots({
           zoneId: "C2C-Z3",
           prefix: "Z",

@@ -1112,3 +1112,691 @@ body {
     height: 30px;
   }
 }
+
+
+/* Flujo Request -> Asignación 15 min -> Guiado Paso a Paso */
+.pf-request-card,
+.pf-active-assignment-bar {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 0.72rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.pf-request-card {
+  border-left: 4px solid var(--accent-border);
+}
+
+.pf-request-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.16rem;
+}
+
+.pf-request-card-title {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.pf-request-card-desc {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  line-height: 1.32;
+}
+
+.pf-request-expired-note {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--status-warning-text);
+}
+
+.pf-request-error-note,
+.pf-guidance-error {
+  margin: 0;
+  padding: 0.45rem 0.65rem;
+  border-radius: var(--radius-input);
+  background: var(--status-danger-bg);
+  color: var(--status-danger-text);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.pf-active-assignment-bar {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  border-left: 4px solid var(--guidance-spot-border);
+  background: var(--guidance-spot-bg);
+}
+
+.pf-active-assignment-bar[data-conflict="true"] {
+  border-left-color: var(--status-danger);
+  background: var(--status-danger-bg);
+}
+
+.pf-active-assignment-bar[data-status="arrived"] {
+  border-left-color: var(--status-success);
+  background: var(--status-success-bg);
+}
+
+.pf-active-assignment-eyebrow {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--accent-text);
+}
+
+.pf-active-assignment-bar[data-conflict="true"] .pf-active-assignment-eyebrow {
+  color: var(--status-danger-text);
+}
+
+.pf-active-assignment-bar[data-status="arrived"] .pf-active-assignment-eyebrow {
+  color: var(--status-success-text);
+}
+
+.pf-zone-assigned-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.08rem 0.44rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.62rem;
+  font-weight: 800;
+  background: var(--guidance-spot-bg);
+  color: var(--accent-text);
+  border: 1px solid var(--guidance-spot-border);
+}
+
+.pf-zone-block[data-assigned="true"] {
+  border-color: var(--guidance-spot-border);
+  box-shadow: inset 0 0 0 1px var(--guidance-spot-border);
+}
+
+/* Botones compartidos del flujo de asignación */
+.pf-primary-btn,
+.pf-secondary-btn,
+.pf-danger-ghost-btn {
+  min-height: 44px;
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: background-color 0.15s ease, opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.pf-primary-btn {
+  width: 100%;
+  border: 1px solid var(--accent-border);
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.pf-primary-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.pf-primary-btn:disabled,
+.pf-secondary-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pf-secondary-btn {
+  border: 1px solid var(--accent-border);
+  background: var(--bg-surface);
+  color: var(--accent-text);
+}
+
+.pf-danger-ghost-btn {
+  border: 1px solid var(--status-danger);
+  background: transparent;
+  color: var(--status-danger-text);
+}
+
+.pf-btn-compact {
+  min-height: 36px;
+  width: auto;
+  padding: 0.35rem 0.78rem;
+  font-size: 0.74rem;
+}
+
+/* Vista de guiado paso a paso */
+.pf-guidance-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.pf-guidance-hero,
+.pf-guidance-state-card {
+  margin-top: -32px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-float);
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.pf-guidance-hero[data-conflict="true"] {
+  border-color: var(--status-danger);
+}
+
+.pf-guidance-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
+.pf-back-btn-compact {
+  min-height: 34px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.74rem;
+}
+
+.pf-guidance-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.22rem 0.62rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.69rem;
+  font-weight: 800;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.pf-guidance-live-pill[data-status="maneuver"] {
+  background: var(--status-warning-bg);
+  color: var(--status-warning-text);
+}
+
+.pf-guidance-live-pill[data-status="conflict"] {
+  background: var(--status-danger-bg);
+  color: var(--status-danger-text);
+}
+
+.pf-guidance-hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.pf-guidance-spot-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.pf-guidance-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.pf-guidance-eyebrow {
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent-text);
+}
+
+.pf-guidance-info-tag {
+  padding: 0.1rem 0.48rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 0.63rem;
+  font-weight: 700;
+}
+
+.pf-guidance-slot-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.pf-guidance-slot-code {
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--radius-input);
+  background: var(--guidance-spot-bg);
+  border: 1.5px solid var(--guidance-spot-border);
+  color: var(--accent-text);
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+
+.pf-guidance-lot-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.pf-guidance-zone-name {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.pf-guidance-landmark {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.25;
+}
+
+.pf-countdown-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 0.35rem 0.62rem;
+  border-radius: var(--radius-input);
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.pf-countdown-box[data-urgency="warning"] {
+  background: var(--status-warning-bg);
+  border-color: var(--status-warning);
+}
+
+.pf-countdown-box[data-urgency="critical"] {
+  background: var(--status-danger-bg);
+  border-color: var(--status-danger);
+}
+
+.pf-countdown-digits {
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-text);
+}
+
+.pf-countdown-box[data-urgency="warning"] .pf-countdown-digits {
+  color: var(--status-warning-text);
+}
+
+.pf-countdown-box[data-urgency="critical"] .pf-countdown-digits {
+  color: var(--status-danger-text);
+}
+
+.pf-countdown-label {
+  font-size: 0.63rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-top: 0.1rem;
+  white-space: nowrap;
+}
+
+.pf-countdown-track {
+  width: 100%;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-input);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+.pf-countdown-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  transition: width 0.5s linear, background-color 0.25s ease;
+}
+
+.pf-countdown-fill[data-urgency="warning"] {
+  background: var(--status-warning);
+}
+
+.pf-countdown-fill[data-urgency="critical"] {
+  background: var(--status-danger);
+}
+
+.pf-guidance-voice-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.pf-guidance-route-chip {
+  padding: 0.22rem 0.58rem;
+  border-radius: var(--radius-pill);
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+/* Alertas contextuales de cámara en guiado */
+.pf-guidance-alert {
+  border-radius: var(--radius-card);
+  padding: 0.65rem 0.78rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 1.5px solid var(--status-warning);
+  background: var(--status-warning-bg);
+}
+
+.pf-guidance-alert[data-variant="conflict"] {
+  border-color: var(--status-danger);
+  background: var(--status-danger-bg);
+}
+
+.pf-guidance-alert-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.76rem;
+  color: var(--text-primary);
+}
+
+.pf-guidance-alert-body strong {
+  font-size: 0.82rem;
+}
+
+.pf-guidance-alert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+/* Ruta paso a paso */
+.pf-route-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 0.72rem 0.78rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pf-route-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.pf-route-meta-tag {
+  padding: 0.16rem 0.52rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.pf-route-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.pf-route-step {
+  border-radius: var(--radius-input);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  padding: 0.45rem 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.pf-route-step[data-current="true"] {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+
+.pf-route-step-btn {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+.pf-route-step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--accent-text);
+  font-size: 0.72rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 0.08rem;
+}
+
+.pf-route-step[data-current="true"] .pf-route-step-num {
+  background: var(--accent);
+  border-color: var(--accent-border);
+  color: #ffffff;
+}
+
+.pf-route-step[data-done="true"] .pf-route-step-num {
+  background: var(--status-success);
+  border-color: var(--status-success);
+  color: #ffffff;
+}
+
+.pf-route-step-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.pf-route-step-title {
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.pf-route-step-desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.pf-external-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding-left: 2rem;
+  flex-wrap: wrap;
+}
+
+.pf-ext-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--accent-border);
+  background: var(--bg-surface);
+  color: var(--accent-text);
+  font-size: 0.69rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* Acciones inferiores del conductor */
+.pf-guidance-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.pf-guidance-secondary-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.pf-guidance-demo-bar {
+  border-radius: var(--radius-card);
+  padding: 0.35rem 0.6rem;
+  flex-wrap: wrap;
+}
+
+.pf-guidance-demo-btns {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+/* Tarjetas terminales: Llegada y Expiración */
+.pf-guidance-state-card {
+  align-items: flex-start;
+  padding: 1rem 0.95rem;
+  gap: 0.6rem;
+}
+
+.pf-guidance-state-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.68rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.pf-guidance-state-badge[data-variant="success"] {
+  background: var(--status-success-bg);
+  color: var(--status-success-text);
+}
+
+.pf-guidance-state-badge[data-variant="danger"] {
+  background: var(--status-danger-bg);
+  color: var(--status-danger-text);
+}
+
+.pf-guidance-state-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.pf-guidance-state-desc {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.pf-guidance-state-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.2rem;
+}
+
+/* Punto indicador en navbar para guía activa */
+.pf-nav-icon-circle {
+  position: relative;
+}
+
+.pf-nav-status-dot {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--status-success);
+  border: 1.5px solid var(--bg-nav);
+}
+
+.pf-nav-status-dot[data-conflict="true"] {
+  background: var(--status-danger);
+}
+
+/* Animaciones SVG de ruta y baliza */
+@keyframes pf-route-flow {
+  from {
+    stroke-dashoffset: 34;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pf-beacon-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.3);
+  }
+}
+
+.pf-guidance-route-path {
+  animation: pf-route-flow 1.15s linear infinite;
+}
+
+.pf-spot-beacon {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pf-beacon-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-guidance-route-path,
+  .pf-spot-beacon {
+    animation: none;
+  }
+
+  .pf-countdown-fill {
+    transition: none;
+  }
+}
