@@ -1,104 +1,98 @@
 /**
- * Tokens de Diseño — Identidad Gráfica TecNM (Azul Pantone 294 C #1B396A)
+ * Tokens de Diseño — ParkFlow UI & Design System (style-agents.md)
+ * Identidad Gráfica TecNM (Azul Pantone 294 C — #1B396A)
  * Soporta Modo Claro (:root) y Modo Oscuro ([data-theme="dark"]).
  * Licencia: PolyForm Noncommercial License 1.0.0
  */
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600;1,700&display=swap");
 
 :root {
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
-  /* Brand & Accent (TecNM Pantone 294 C) */
-  --accent: #1b396a;
-  --accent-hover: #142b52;
-  --accent-soft: #ebf0f8;
-  --accent-text: #1b396a;
-  --accent-border: #1b396a;
+  /* Brand (TecNM Pantone 294 C) */
+  --tecnm-blue: #1B396A;
+  --tecnm-blue-deep: #132A4F;
+  --tecnm-blue-mid: #254E8F;
+  --tecnm-accent-bright: #4B83F2;
 
-  /* Surfaces & Text (Light Mode) */
-  --bg-app: #f6f6f6;
-  --bg-surface: #ffffff;
-  --bg-input: #f6f6f6;
-  --bg-nav: #010101;
-  --text-primary: #010101;
-  --text-muted: #666666;
-  --border-subtle: #e0e0e0;
+  /* Surfaces & Text — Light Mode */
+  --bg-app: #F4F6FA;
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #FFFFFF;
+  --bg-subtle: #EEF2F7;
+  --bg-nav: rgba(15, 20, 30, 0.92);
+  --text-primary: #0B1220;
+  --text-secondary: #5A657A;
+  --text-muted: #8894A8;
+  --border-subtle: rgba(15, 23, 42, 0.08);
+  --border-bay: rgba(15, 23, 42, 0.14);
+  --accent-text: #1B396A;
+  --accent-soft: rgba(27, 57, 106, 0.10);
+  --accent-soft-strong: rgba(27, 57, 106, 0.16);
+  --shadow-float: 0 14px 34px rgba(15, 23, 42, 0.10);
+  --shadow-card: 0 4px 16px rgba(15, 23, 42, 0.05);
 
-  /* Semantic Status (INT-SW-01 / INT-UI-01) */
-  --status-success: #16a34a;
-  --status-success-text: #15803d;
-  --status-success-bg: #dcfce7;
-  --status-warning: #ea580c;
-  --status-warning-text: #b45309;
-  --status-warning-bg: #ffedd5;
-  --status-danger: #dc2626;
-  --status-danger-text: #b91c1c;
-  --status-danger-bg: #fee2e2;
+  /* Semantic Status */
+  --free: #16A34A;
+  --free-soft: rgba(22, 163, 74, 0.14);
+  --free-text: #15803D;
+  --maneuver: #F59E0B;
+  --maneuver-soft: rgba(245, 158, 11, 0.14);
+  --maneuver-text: #B45309;
+  --occupied: #EF4444;
+  --occupied-soft: rgba(239, 68, 68, 0.14);
+  --occupied-text: #B91C1C;
+  --car-body: #94A3B8;
+  --car-glass: #334155;
+  --lane-bg: #EAEFF6;
+  --lane-dash: rgba(27, 57, 106, 0.28);
 
-  /* SVG Map Surface Tokens (Light) */
-  --map-canvas-bg: #f6f6f6;
-  --map-lane-bg: #eceff4;
-  --map-slot-bg: #ffffff;
-  --map-car-body: #9ca3af;
-  --map-car-cabin: #6b7280;
-  --map-car-window: #e5e7eb;
-
-  /* Guidance & Assignment Tokens (Light) */
-  --guidance-route: #1b396a;
-  --guidance-route-glow: rgba(27, 57, 106, 0.22);
-  --guidance-spot-bg: #dbe7fb;
-  --guidance-spot-border: #1b396a;
-
-  /* Geometry & Elevation */
-  --radius-card: 20px;
-  --radius-input: 12px;
+  /* Geometry Scale (style-agents.md §3) */
   --radius-pill: 9999px;
-  --shadow-float: 0 12px 32px rgba(1, 1, 1, 0.08);
-  --shadow-card: 0 4px 16px rgba(1, 1, 1, 0.04);
-  --touch-min: 44px;
+  --radius-header: 28px;
+  --radius-sheet: 28px;
+  --radius-board: 24px;
+  --radius-card: 20px;
+  --radius-control: 12px;
+  --radius-bay: 10px;
+
+  /* Motion System */
+  --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.35, 0.64, 1);
+  --dur-fast: 160ms;
+  --dur-base: 260ms;
+  --dur-slow: 420ms;
 }
 
 [data-theme="dark"] {
-  --accent: #1b396a;
-  --accent-hover: #254b8a;
-  --accent-soft: rgba(75, 123, 229, 0.18);
-  --accent-text: #5b8def;
-  --accent-border: #4b7be5;
-
-  --bg-app: #121212;
-  --bg-surface: #2c2c2c;
-  --bg-input: #222222;
-  --bg-nav: #2c2c2c;
-  --text-primary: #ffffff;
-  --text-muted: #a8a8a8;
-  --border-subtle: #3a3a3a;
-
-  --status-success: #4ade80;
-  --status-success-text: #4ade80;
-  --status-success-bg: rgba(22, 163, 74, 0.18);
-  --status-warning: #fb923c;
-  --status-warning-text: #fdba74;
-  --status-warning-bg: rgba(234, 88, 12, 0.18);
-  --status-danger: #f87171;
-  --status-danger-text: #fca5a5;
-  --status-danger-bg: rgba(220, 38, 38, 0.22);
-
-  /* SVG Map Surface Tokens (Dark) */
-  --map-canvas-bg: #181818;
-  --map-lane-bg: #222222;
-  --map-slot-bg: #2c2c2c;
-  --map-car-body: #6b7280;
-  --map-car-cabin: #4b5563;
-  --map-car-window: #9ca3af;
-
-  /* Guidance & Assignment Tokens (Dark) */
-  --guidance-route: #5b8def;
-  --guidance-route-glow: rgba(91, 141, 239, 0.28);
-  --guidance-spot-bg: rgba(75, 123, 229, 0.24);
-  --guidance-spot-border: #5b8def;
-
-  /* Elevación tonal plana sin sombras en Dark Mode */
-  --shadow-float: none;
+  --bg-app: #0E1117;
+  --bg-surface: #171B24;
+  --bg-surface-elevated: #1E2430;
+  --bg-subtle: #1C212C;
+  --bg-nav: rgba(26, 31, 42, 0.88);
+  --text-primary: #F8FAFC;
+  --text-secondary: #9CA6B8;
+  --text-muted: #6C778B;
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-bay: rgba(255, 255, 255, 0.13);
+  --accent-text: #6BA0FF;
+  --accent-soft: rgba(75, 131, 242, 0.16);
+  --accent-soft-strong: rgba(75, 131, 242, 0.26);
+  --shadow-float: 0 16px 36px rgba(0, 0, 0, 0.45);
   --shadow-card: none;
+
+  --free: #22C55E;
+  --free-soft: rgba(34, 197, 94, 0.16);
+  --free-text: #4ADE80;
+  --maneuver: #F59E0B;
+  --maneuver-soft: rgba(245, 158, 11, 0.16);
+  --maneuver-text: #FBBF24;
+  --occupied: #F87171;
+  --occupied-soft: rgba(248, 113, 113, 0.16);
+  --occupied-text: #FCA5A5;
+  --car-body: #64748B;
+  --car-glass: #1E293B;
+  --lane-bg: #12161F;
+  --lane-dash: rgba(255, 255, 255, 0.16);
 }

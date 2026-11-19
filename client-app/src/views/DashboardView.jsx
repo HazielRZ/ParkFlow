@@ -1,6 +1,8 @@
 /**
- * Vista principal móvil/PWA de disponibilidad en tiempo real con flujo
- * Solicitud → Asignación temporal (15 min) → Guiado paso a paso + Zoom Semántico (Driver-First).
+ * Vista principal móvil/PWA de disponibilidad en tiempo real con identidad TecNM (#1B396A).
+ * Cumple style-agents.md: header curvo, carril horizontal de campus, hero de ocupación con
+ * anillo radial + barra segmentada, tarjeta inteligente unificada, zonas con mini-matriz,
+ * croquis arquitectónico, bottom sheet de Modo Demo y cápsula de navegación flotante.
  * Licencia: PolyForm Noncommercial License 1.0.0
  */
 
@@ -16,6 +18,24 @@ import {
 import { ParkingGrid } from "../components/ParkingGrid.jsx";
 import { ZoneSchematicMap } from "../components/ZoneSchematicMap.jsx";
 import { SpotGuidanceView } from "../components/SpotGuidanceView.jsx";
+import { DemoBottomSheet } from "../components/DemoBottomSheet.jsx";
+import {
+  AlertTriangleIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  LayoutGridIcon,
+  LockIcon,
+  MoonIcon,
+  NavigationIcon,
+  ParkingSquareIcon,
+  SlidersIcon,
+  SparklesIcon,
+  SquareStopIcon,
+  SunIcon,
+  Volume2Icon,
+} from "../components/Icons.jsx";
 import { useParkingSocket } from "../hooks/useParkingSocket.js";
 import { useParkingAssignment } from "../hooks/useParkingAssignment.js";
 import { getEligibleLots } from "../utils/assignmentLogic.js";
@@ -27,10 +47,10 @@ import {
 } from "../utils/speechAvailability.js";
 
 const STATE_FILTERS = [
-  { id: "Todos", label: "Todos" },
-  { id: "Libre", label: "✓ Libres" },
-  { id: "En maniobra", label: "◐ Maniobra" },
-  { id: "Ocupado", label: "✕ Ocupados" },
+  { id: "Todos", label: "Todos", dotColor: null },
+  { id: "Libre", label: "Libres", dotColor: "var(--free)" },
+  { id: "En maniobra", label: "Maniobra", dotColor: "var(--maneuver)" },
+  { id: "Ocupado", label: "Ocupados", dotColor: "var(--occupied)" },
 ];
 
 export function DashboardView({ wsUrl }) {
@@ -51,6 +71,7 @@ export function DashboardView({ wsUrl }) {
   const [technicalMode, setTechnicalMode] = useState(false);
   const [demoEnabled] = useState(true);
   const [simulateHighOccupancy, setSimulateHighOccupancy] = useState(false);
+  const [demoSheetOpen, setDemoSheetOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speechNotice, setSpeechNotice] = useState("");
   const [theme, setTheme] = useState("light");
@@ -313,6 +334,21 @@ export function DashboardView({ wsUrl }) {
     }
   };
 
+  const handleReserveSpecificSlot = async (slot) => {
+    if (!slot || slot.state !== "Libre") {
+      return;
+    }
+    stopVoiceState();
+    const result = await requestSpot({
+      preferredLotId: activeLot?.id,
+      preferredPolygonId: slot.polygon_id,
+      userRole,
+    });
+    if (result?.ok && result.assignment) {
+      setSelectedSlot(null);
+    }
+  };
+
   const handleReassignSpot = async () => {
     stopVoiceState();
     const result = await reassignSpot({ userRole });
@@ -352,11 +388,32 @@ export function DashboardView({ wsUrl }) {
   };
 
   const showGuidanceScreen = activeView === "guidance" && Boolean(assignment);
+  const isCroquisActive = !showGuidanceScreen && selectedZoneId !== null;
+
+  // Cálculos del anillo radial y barra segmentada para el Hero de ocupación
+  const totalSlots = Math.max(1, activeLotMetrics.total_slots || 0);
+  const freePct = (activeLotMetrics.free / totalSlots) * 100;
+  const maneuverPct = (activeLotMetrics.in_maneuver / totalSlots) * 100;
+  const occupiedPct = Math.max(0, 100 - freePct - maneuverPct);
+
+  const ringRadius = 31;
+  const ringCircumference = 2 * Math.PI * ringRadius;
+  const ringOffset =
+    ringCircumference -
+    (Math.min(100, Math.max(0, occupancyPercentage)) / 100) * ringCircumference;
+  const ringColor = activeLotMetrics.high_occupancy_alert
+    ? "var(--occupied)"
+    : occupancyPercentage >= 70
+      ? "var(--maneuver)"
+      : "var(--accent-text)";
 
   return (
-    <main className="pf-app">
-      {/* Header compacto en Azul Pantone 294 C (#1B396A) */}
-      <header className="pf-hero-header">
+    <main className="pf-app" data-has-context={String(isCroquisActive)}>
+      {/* Header curvo institucional (#1B396A -> #132A4F, border-bottom-radius: 28px) */}
+      <header
+        className="pf-hero-header"
+        data-compact={String(showGuidanceScreen)}
+      >
         <div className="pf-header-top">
           <div className="pf-brand">
             <span className="pf-brand-badge" aria-hidden="true">
@@ -369,15 +426,18 @@ export function DashboardView({ wsUrl }) {
           </div>
 
           <div className="pf-header-actions">
-            <div
-              className="pf-conn-badge"
+            <button
+              type="button"
+              className="pf-conn-pill"
               data-status={connectionStatus}
-              aria-live="polite"
-              title="Estado de conexión en tiempo real"
+              onClick={() => setDemoSheetOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={demoSheetOpen}
+              title="Abrir controles de Modo Demo"
             >
               <span className="pf-conn-dot" aria-hidden="true" />
               <span>{connectionLabel}</span>
-            </div>
+            </button>
 
             <button
               type="button"
@@ -390,10 +450,85 @@ export function DashboardView({ wsUrl }) {
                   : "Activar modo claro"
               }
             >
-              {theme === "light" ? "☾" : "☀"}
+              <span key={theme} className="pf-theme-icon-swap" aria-hidden="true">
+                {theme === "light" ? <MoonIcon size={17} /> : <SunIcon size={17} />}
+              </span>
             </button>
           </div>
         </div>
+
+        {!showGuidanceScreen && (
+          <>
+            <div className="pf-header-headline-row">
+              <h2 className="pf-hero-headline">
+                Encuentra tu <em className="pf-italic-accent">lugar</em>
+              </h2>
+
+              <button
+                type="button"
+                className="pf-header-voice-btn"
+                data-speaking={String(isSpeaking)}
+                onClick={handleVoiceReadout}
+                aria-pressed={isSpeaking}
+                aria-label={
+                  isSpeaking
+                    ? "Detener lectura por voz"
+                    : "Escuchar disponibilidad por voz"
+                }
+              >
+                {isSpeaking ? (
+                  <SquareStopIcon size={14} />
+                ) : (
+                  <Volume2Icon size={15} />
+                )}
+                <span>{isSpeaking ? "Detener" : "Escuchar"}</span>
+              </button>
+            </div>
+
+            {speechNotice && (
+              <p
+                className="pf-header-speech-caption"
+                role="status"
+                aria-live="polite"
+              >
+                {speechNotice}
+              </p>
+            )}
+
+            {/* Carril horizontal deslizable de píldoras de campus (reemplaza la cuadrícula 2x2) */}
+            <div
+              className="pf-campus-rail"
+              role="tablist"
+              aria-label="Estacionamientos del campus"
+            >
+              {resolvedLots.map((lot) => {
+                const isSelected = activeLot.id === lot.id;
+                const isStaffOnly = lot.access_type === "staff_only";
+                return (
+                  <button
+                    key={lot.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={isSelected}
+                    className="pf-campus-pill"
+                    data-staff={String(isStaffOnly)}
+                    onClick={() => handleSelectLot(lot.id)}
+                  >
+                    <span>{lot.shortName}</span>
+                    {isStaffOnly && (
+                      <span
+                        className="pf-pill-lock"
+                        title="Exclusivo personal ITM"
+                      >
+                        <LockIcon size={12} />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
       </header>
 
       <div className="pf-content">
@@ -421,312 +556,356 @@ export function DashboardView({ wsUrl }) {
             }
             onExploreMap={handleExploreFromGuidance}
             onDismiss={handleDismissAssignment}
-            onSimulateShortTimer={simulateShortTimer}
-            onSimulateExternalOccupancy={simulateExternalOccupancy}
           />
         ) : (
           <>
-            {/* Nivel 1 (Macro): Tarjeta superpuesta con selector de lotes y KPIs en 1 franja */}
+            {/* Tarjeta Hero de Ocupación Espacial superpuesta (-38px) */}
             <section
-              className="pf-summary-float-card"
-              aria-label="Selector de estacionamiento y resumen rápido"
+              className="pf-hero-occupancy-card"
+              aria-label="Resumen de ocupación del estacionamiento"
             >
-              <div className="pf-headline-row">
-                <h2 className="pf-section-headline">
-                  Encuentra tu <em className="pf-italic-accent">lugar</em>
-                </h2>
-
-                <button
-                  type="button"
-                  className="pf-voice-btn"
-                  data-speaking={String(isSpeaking)}
-                  onClick={handleVoiceReadout}
-                  aria-pressed={isSpeaking}
-                >
-                  <span aria-hidden="true">{isSpeaking ? "⏹" : "🔊"}</span>
-                  <span>
-                    {isSpeaking ? "Detener voz" : "Escuchar disponibilidad"}
+              <div className="pf-hero-occ-main">
+                <div className="pf-hero-occ-metrics">
+                  <span className="pf-hero-occ-eyebrow">
+                    {activeLot.shortName} · Disponibilidad actual
                   </span>
-                </button>
-              </div>
-
-              {speechNotice && (
-                <p
-                  className="pf-speech-caption"
-                  role="status"
-                  aria-live="polite"
-                >
-                  {speechNotice}
-                </p>
-              )}
-
-              {/* Tabs tipo pill para los 4 estacionamientos */}
-              <div
-                className="pf-lot-grid"
-                role="tablist"
-                aria-label="Estacionamientos del campus"
-              >
-                {resolvedLots.map((lot) => {
-                  const isSelected = activeLot.id === lot.id;
-                  const isStaffOnly = lot.access_type === "staff_only";
-                  return (
-                    <button
-                      key={lot.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={isSelected}
-                      className="pf-lot-tab"
-                      data-staff={String(isStaffOnly)}
-                      onClick={() => handleSelectLot(lot.id)}
+                  <div className="pf-hero-free-row">
+                    <strong
+                      key={`${activeLot.id}-${activeLotMetrics.free}`}
+                      className="pf-hero-free-num tabular-nums"
                     >
-                      <span className="pf-lot-tab-name">{lot.shortName}</span>
-                      {isStaffOnly && (
-                        <span
-                          className="pf-staff-badge"
-                          title="Exclusivo personal ITM"
-                        >
-                          🔒 Personal
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
+                      {activeLotMetrics.free}
+                    </strong>
+                    <span className="pf-hero-free-unit">
+                      {activeLotMetrics.free === 1
+                        ? "lugar libre"
+                        : "lugares libres"}
+                    </span>
+                  </div>
+                  <p className="pf-hero-submetric tabular-nums">
+                    {activeLotMetrics.in_maneuver} en maniobra ·{" "}
+                    {activeLotMetrics.occupied}/{activeLotMetrics.total_slots}{" "}
+                    ocupados
+                  </p>
+                </div>
+
+                {/* Anillo radial de porcentaje */}
+                <div
+                  className="pf-radial-ring"
+                  role="img"
+                  aria-label={`${occupancyPercentage}% de ocupación`}
+                >
+                  <svg viewBox="0 0 76 76" className="pf-radial-svg">
+                    <circle
+                      cx="38"
+                      cy="38"
+                      r={ringRadius}
+                      className="pf-radial-track"
+                    />
+                    <circle
+                      cx="38"
+                      cy="38"
+                      r={ringRadius}
+                      className="pf-radial-progress"
+                      style={{
+                        stroke: ringColor,
+                        strokeDasharray: ringCircumference,
+                        strokeDashoffset: ringOffset,
+                      }}
+                    />
+                  </svg>
+                  <div className="pf-radial-center">
+                    <strong className="pf-radial-pct tabular-nums">
+                      {occupancyPercentage}%
+                    </strong>
+                    <span className="pf-radial-label">ocup.</span>
+                  </div>
+                </div>
               </div>
 
-              {/* Franja horizontal compacta de 3 KPIs */}
-              <div
-                className="pf-kpi-strip"
-                aria-label="Indicadores de disponibilidad del estacionamiento"
-              >
-                <div className="pf-kpi-cell" data-variant="free">
-                  <span
-                    className="pf-kpi-value"
-                    style={{ color: "var(--status-success)" }}
-                  >
-                    {activeLotMetrics.free}
-                  </span>
-                  <span className="pf-kpi-label">Libres</span>
+              {/* Barra segmentada horizontal de 3 estados */}
+              <div className="pf-segmented-bar-wrap">
+                <div
+                  className="pf-segmented-bar"
+                  role="img"
+                  aria-label={`Libres: ${activeLotMetrics.free}, En maniobra: ${activeLotMetrics.in_maneuver}, Ocupados: ${activeLotMetrics.occupied}`}
+                >
+                  {freePct > 0 && (
+                    <span
+                      className="pf-seg-free"
+                      style={{ width: `${freePct}%` }}
+                    />
+                  )}
+                  {maneuverPct > 0 && (
+                    <span
+                      className="pf-seg-maneuver"
+                      style={{ width: `${maneuverPct}%` }}
+                    />
+                  )}
+                  {occupiedPct > 0 && (
+                    <span
+                      className="pf-seg-occupied"
+                      style={{ width: `${occupiedPct}%` }}
+                    />
+                  )}
                 </div>
 
-                <div className="pf-kpi-cell" data-variant="maneuver">
-                  <span
-                    className="pf-kpi-value"
-                    style={{ color: "var(--status-warning)" }}
-                  >
-                    {activeLotMetrics.in_maneuver}
+                <div className="pf-segmented-legend tabular-nums">
+                  <span className="pf-seg-legend-item">
+                    <span
+                      className="pf-legend-dot"
+                      style={{ backgroundColor: "var(--free)" }}
+                    />
+                    <span>{activeLotMetrics.free} libres</span>
                   </span>
-                  <span className="pf-kpi-label">En maniobra</span>
-                </div>
-
-                <div className="pf-kpi-cell" data-variant="ratio">
-                  <span
-                    className="pf-kpi-value"
-                    style={{ color: "var(--accent-text)" }}
-                  >
-                    {occupancyPercentage}%
+                  <span className="pf-seg-legend-item">
+                    <span
+                      className="pf-legend-dot"
+                      style={{ backgroundColor: "var(--maneuver)" }}
+                    />
+                    <span>{activeLotMetrics.in_maneuver} maniobra</span>
                   </span>
-                  <span className="pf-kpi-label">
-                    Ocupación ({activeLotMetrics.total_slots})
+                  <span className="pf-seg-legend-item">
+                    <span
+                      className="pf-legend-dot"
+                      style={{ backgroundColor: "var(--car-body)" }}
+                    />
+                    <span>{activeLotMetrics.occupied} ocupados</span>
                   </span>
                 </div>
               </div>
             </section>
 
-            {/* Acceso rápido a asignación activa o botón principal de solicitud (15 min) */}
-            {hasLiveAssignedSpot ? (
-              <section
-                className="pf-active-assignment-bar"
-                data-conflict={String(effectiveStatus === "conflict")}
-                data-status={effectiveStatus}
-                role="region"
-                aria-label="Tu espacio asignado actualmente"
-              >
-                <div className="pf-banner-body">
-                  <span className="pf-active-assignment-eyebrow">
-                    {effectiveStatus === "conflict"
-                      ? "⚠ Conflicto detectado"
-                      : effectiveStatus === "arrived"
-                        ? "✓ Estacionado"
-                        : `⏱ Reserva activa • ${formattedTime}`}
-                  </span>
-                  <strong className="pf-banner-title">
-                    Cajón {assignment.slot_name} • {assignment.lot_short_name}
-                  </strong>
-                  <span className="pf-banner-desc">
-                    {assignment.zone_name} ({assignment.zone_landmark})
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  className="pf-banner-cta"
-                  onClick={() => {
-                    stopVoiceState();
-                    setActiveView("guidance");
-                  }}
-                >
-                  {effectiveStatus === "arrived"
-                    ? "Ver detalle →"
-                    : "Ver guía →"}
-                </button>
-              </section>
-            ) : (
-              <section
-                className="pf-request-card"
-                role="region"
-                aria-label="Solicitar espacio de estacionamiento"
-              >
-                <div className="pf-request-card-info">
-                  <strong className="pf-request-card-title">
-                    {targetRequestLot
-                      ? "Reserva y ruta guiada por 15 minutos"
-                      : "Sin espacios disponibles"}
-                  </strong>
-                  <span className="pf-request-card-desc">
-                    {targetRequestLot
-                      ? targetRequestLot.id !== activeLot.id
-                        ? `Se asignará el mejor cajón en ${targetRequestLot.shortName} (${targetRequestMetrics?.free ?? 0} libres) y te guiaremos hasta ahí.`
-                        : `Asigna automáticamente el mejor cajón libre en ${activeLot.shortName} y te guía paso a paso.`
-                      : "Todos los estacionamientos habilitados para tu rol están llenos en este momento."}
-                  </span>
-                  {effectiveStatus === "expired" && (
-                    <span className="pf-request-expired-note">
-                      Tu reserva anterior caducó. Puedes solicitar un lugar nuevo.
-                    </span>
-                  )}
-                  {assignmentError && (
-                    <span className="pf-request-error-note" role="alert">
-                      {assignmentError}
-                    </span>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  className="pf-primary-btn pf-request-cta"
-                  disabled={!targetRequestLot || isRequesting}
-                  onClick={() => handleRequestSpot(activeLot?.id)}
-                >
-                  {isRequesting
-                    ? "Asignando cajón..."
-                    : targetRequestLot
-                      ? "🚗 Solicitar espacio (15 min)"
-                      : "Sin cajones disponibles"}
-                </button>
-              </section>
-            )}
-
             {/* Alerta de saturación >= 90% (RF-04) */}
             {activeLotMetrics.high_occupancy_alert && (
               <div className="pf-alert-saturation" role="alert">
-                <span>
-                  ⚠️ Saturación {occupancyPercentage}% en {activeLot.shortName}{" "}
-                  (RF-04).
+                <span className="pf-alert-sat-text">
+                  <AlertTriangleIcon size={16} />
+                  <span className="tabular-nums">
+                    Saturación {occupancyPercentage}% en {activeLot.shortName}{" "}
+                    (RF-04)
+                  </span>
                 </span>
                 {suggestedGeneralLot && suggestedGeneralMetrics?.free > 0 && (
                   <button
                     type="button"
-                    className="pf-banner-cta pf-banner-cta-danger"
+                    className="pf-alert-sat-cta"
                     onClick={() => handleSelectLot(suggestedGeneralLot.id)}
                   >
-                    Ir a {suggestedGeneralLot.shortName} (
-                    {suggestedGeneralMetrics.free}) →
+                    <span className="tabular-nums">
+                      Ir a {suggestedGeneralLot.shortName} (
+                      {suggestedGeneralMetrics.free})
+                    </span>
+                    <ArrowRightIcon size={14} />
                   </button>
                 )}
               </div>
             )}
 
-            {/* Banner contextual Nivel 2: Restricción Personal ITM o Mejor opción ahora */}
-            {selectedZoneId === null &&
-              (isStaffRestricted ? (
+            {/* Tarjeta Protagonista Unificada (Smart Action) en azul TecNM */}
+            {selectedZoneId === null && (
+              hasLiveAssignedSpot ? (
                 <section
-                  className="pf-restricted-banner"
+                  className="pf-smart-card"
+                  data-variant={
+                    effectiveStatus === "conflict"
+                      ? "conflict"
+                      : effectiveStatus === "arrived"
+                        ? "arrived"
+                        : "active"
+                  }
                   role="region"
-                  aria-label="Aviso de acceso exclusivo para personal"
+                  aria-label="Tu espacio asignado actualmente"
                 >
-                  <div className="pf-banner-body">
-                    <strong className="pf-banner-title">
-                      🔒 Acceso exclusivo para personal ITM
-                    </strong>
-                    <span className="pf-banner-desc">
-                      C1 • Edif. L (Av. Tecnológico) requiere pase de
-                      trabajador.
+                  <div className="pf-smart-top">
+                    <span className="pf-smart-eyebrow">
+                      {effectiveStatus === "conflict" ? (
+                        <>
+                          <AlertTriangleIcon size={13} />
+                          <span>Conflicto detectado</span>
+                        </>
+                      ) : effectiveStatus === "arrived" ? (
+                        <>
+                          <CheckCircleIcon size={13} />
+                          <span>Estacionado</span>
+                        </>
+                      ) : (
+                        <>
+                          <ClockIcon size={13} />
+                          <span className="tabular-nums">
+                            Reserva activa · {formattedTime}
+                          </span>
+                        </>
+                      )}
                     </span>
                   </div>
-                  <div className="pf-restricted-actions">
+
+                  <div className="pf-smart-body">
+                    <strong className="pf-smart-title tabular-nums">
+                      Cajón {assignment.slot_name} · {assignment.lot_short_name}
+                    </strong>
+                    <span className="pf-smart-desc">
+                      {assignment.zone_name} ({assignment.zone_landmark})
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="pf-smart-white-cta"
+                    onClick={() => {
+                      stopVoiceState();
+                      setActiveView("guidance");
+                    }}
+                  >
+                    <NavigationIcon size={15} />
+                    <span>
+                      {effectiveStatus === "arrived"
+                        ? "Ver detalle de llegada"
+                        : "Abrir guía paso a paso"}
+                    </span>
+                    <ArrowRightIcon size={15} />
+                  </button>
+                </section>
+              ) : isStaffRestricted ? (
+                <section
+                  className="pf-smart-card"
+                  data-variant="restricted"
+                  role="region"
+                  aria-label="Acceso exclusivo para personal y alternativa recomendada"
+                >
+                  <div className="pf-smart-top">
+                    <span className="pf-smart-eyebrow">
+                      <LockIcon size={13} />
+                      <span>Exclusivo personal ITM</span>
+                    </span>
                     {suggestedGeneralLot && (
                       <button
                         type="button"
-                        className="pf-banner-cta"
+                        className="pf-smart-link"
                         onClick={() => handleSelectLot(suggestedGeneralLot.id)}
                       >
-                        Ir a {suggestedGeneralLot.shortName} (
-                        {suggestedGeneralMetrics?.free ?? 0} libres) →
-                      </button>
-                    )}
-                    {secondaryGeneralLot && (
-                      <button
-                        type="button"
-                        className="pf-banner-cta pf-banner-cta-ghost"
-                        onClick={() => handleSelectLot(secondaryGeneralLot.id)}
-                      >
-                        {secondaryGeneralLot.shortName} (
-                        {getLotMetrics(secondaryGeneralLot).free})
+                        <span className="tabular-nums">
+                          Ver {suggestedGeneralLot.shortName} (
+                          {suggestedGeneralMetrics?.free ?? 0})
+                        </span>
                       </button>
                     )}
                   </div>
+
+                  <div className="pf-smart-body">
+                    <strong className="pf-smart-title">
+                      {activeLot.shortName} requiere pase de trabajador
+                    </strong>
+                    <span className="pf-smart-desc">
+                      {suggestedGeneralLot
+                        ? `Alternativa recomendada: ${suggestedGeneralLot.name} con ${suggestedGeneralMetrics?.free ?? 0} libres.`
+                        : "Cambia tu perfil a Personal ITM en Demo o elige otro lote."}
+                    </span>
+                    {secondaryGeneralLot && (
+                      <div className="pf-smart-alt-row">
+                        <button
+                          type="button"
+                          className="pf-smart-alt-chip"
+                          onClick={() =>
+                            handleSelectLot(secondaryGeneralLot.id)
+                          }
+                        >
+                          <span className="tabular-nums">
+                            {secondaryGeneralLot.shortName} (
+                            {getLotMetrics(secondaryGeneralLot).free} libres)
+                          </span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    className="pf-smart-white-cta"
+                    disabled={!targetRequestLot || isRequesting}
+                    onClick={() => handleRequestSpot(activeLot?.id)}
+                  >
+                    <NavigationIcon size={15} />
+                    <span>
+                      {isRequesting
+                        ? "Asignando cajón..."
+                        : targetRequestLot
+                          ? `Solicitar espacio en ${targetRequestLot.shortName} (15 min)`
+                          : "Sin cajones disponibles"}
+                    </span>
+                  </button>
                 </section>
               ) : (
-                bestZone && (
-                  <section
-                    className="pf-best-banner"
-                    role="region"
-                    aria-label="Mejor opción ahora"
-                  >
-                    <div className="pf-banner-body">
-                      <span className="pf-banner-eyebrow">
-                        Mejor opción ahora
-                      </span>
-                      <strong className="pf-banner-title">
-                        {bestZone.name} • {bestZone.free_count}{" "}
-                        {bestZone.free_count === 1 ? "libre" : "libres"}
-                      </strong>
-                      <span className="pf-banner-desc">
-                        {bestZone.landmark}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      className="pf-banner-cta"
-                      onClick={() => handleOpenZone(bestZone)}
-                    >
-                      Ver zona →
-                    </button>
-                  </section>
-                )
-              ))}
-
-            {/* Barra compacta de 1 línea para Modo Demo */}
-            {!connected && (
-              <div
-                className="pf-demo-bar"
-                aria-label="Controles de modo demostración"
-              >
-                <span className="pf-demo-label">
-                  <strong>Modo demo</strong> •{" "}
-                  {userRole === "student" ? "Rol: Estudiante" : "Rol: Personal"}
-                  {technicalMode ? " • Técnico" : ""}
-                </span>
-                <button
-                  type="button"
-                  className="pf-demo-btn"
-                  aria-pressed={simulateHighOccupancy}
-                  onClick={() => setSimulateHighOccupancy((prev) => !prev)}
+                <section
+                  className="pf-smart-card"
+                  role="region"
+                  aria-label="Mejor opción y solicitud de espacio"
                 >
-                  {simulateHighOccupancy
-                    ? "Restaurar demo"
-                    : "Simular alerta ≥90% (RF-04)"}
-                </button>
-              </div>
+                  <div className="pf-smart-top">
+                    <span className="pf-smart-eyebrow">
+                      <SparklesIcon size={13} />
+                      <span>Mejor opción ahora</span>
+                    </span>
+                    {bestZone && (
+                      <button
+                        type="button"
+                        className="pf-smart-link"
+                        onClick={() => handleOpenZone(bestZone)}
+                      >
+                        <span>Ver croquis</span>
+                        <ArrowRightIcon size={13} />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="pf-smart-body">
+                    <strong className="pf-smart-title tabular-nums">
+                      {bestZone
+                        ? `${bestZone.name} · ${bestZone.free_count} ${
+                            bestZone.free_count === 1 ? "libre" : "libres"
+                          }`
+                        : targetRequestLot
+                          ? `Disponible en ${targetRequestLot.shortName}`
+                          : "Sin espacios disponibles"}
+                    </strong>
+                    <span className="pf-smart-desc">
+                      {bestZone && activeLotMetrics.free > 0
+                        ? `${bestZone.landmark}. Asigna automáticamente el mejor cajón cercano al acceso.`
+                        : targetRequestLot && targetRequestLot.id !== activeLot.id
+                          ? `Sin cupo aquí. Te asignaremos lugar en ${targetRequestLot.shortName} (${targetRequestMetrics?.free ?? 0} libres).`
+                          : "Todos los estacionamientos habilitados para tu rol están llenos en este momento."}
+                    </span>
+
+                    {effectiveStatus === "expired" && (
+                      <span className="pf-smart-note">
+                        Tu reserva anterior caducó. Puedes solicitar un lugar
+                        nuevo.
+                      </span>
+                    )}
+                    {assignmentError && (
+                      <span className="pf-smart-error" role="alert">
+                        {assignmentError}
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    className="pf-smart-white-cta"
+                    disabled={!targetRequestLot || isRequesting}
+                    onClick={() => handleRequestSpot(activeLot?.id)}
+                  >
+                    <NavigationIcon size={15} />
+                    <span>
+                      {isRequesting
+                        ? "Asignando cajón..."
+                        : targetRequestLot
+                          ? "Solicitar espacio y guiar (15 min)"
+                          : "Sin cajones disponibles"}
+                    </span>
+                  </button>
+                </section>
+              )
             )}
 
             {/* Nivel 2 (Meso) vs Nivel 3 (Micro) */}
@@ -743,6 +922,9 @@ export function DashboardView({ wsUrl }) {
                 assignedSlotName={
                   hasLiveAssignedSpot ? assignment.slot_name : null
                 }
+                assignedPolygonId={
+                  hasLiveAssignedSpot ? assignment.polygon_id : null
+                }
                 userRole={userRole}
                 technicalMode={technicalMode}
                 onSelectZone={handleOpenZone}
@@ -757,16 +939,17 @@ export function DashboardView({ wsUrl }) {
                       className="pf-back-btn"
                       onClick={handleBackToZones}
                     >
-                      ← Ver zonas
+                      <ArrowLeftIcon size={15} />
+                      <span>Ver zonas</span>
                     </button>
                     <div className="pf-micro-summary">
                       <span className="pf-micro-lot-tag">
                         {activeLot.shortName}
                       </span>
-                      <strong className="pf-micro-count">
+                      <strong className="pf-micro-count tabular-nums">
                         {activeZone.free_count} libres
                         {activeZone.maneuver_count > 0
-                          ? ` • ${activeZone.maneuver_count} maniobra`
+                          ? ` · ${activeZone.maneuver_count} maniobra`
                           : ""}
                       </strong>
                     </div>
@@ -790,7 +973,7 @@ export function DashboardView({ wsUrl }) {
                           onClick={() => handleOpenZone(zone)}
                         >
                           <span>{zone.shortLabel || zone.name}</span>
-                          <span className="pf-micro-tab-count">
+                          <span className="pf-micro-tab-count tabular-nums">
                             {zone.free_count}
                           </span>
                         </button>
@@ -798,7 +981,7 @@ export function DashboardView({ wsUrl }) {
                     })}
                   </div>
 
-                  {/* Filtros de estado dentro del Nivel 3 */}
+                  {/* Filtros de estado dentro del Nivel 3 (sin emojis/símbolos repetitivos) */}
                   <div
                     className="pf-filter-bar"
                     role="group"
@@ -812,12 +995,19 @@ export function DashboardView({ wsUrl }) {
                         aria-pressed={stateFilter === filter.id}
                         onClick={() => setStateFilter(filter.id)}
                       >
-                        {filter.label}
+                        {filter.dotColor && (
+                          <span
+                            className="pf-legend-dot"
+                            style={{ backgroundColor: filter.dotColor }}
+                          />
+                        )}
+                        <span>{filter.label}</span>
                       </button>
                     ))}
                   </div>
 
                   <ParkingGrid
+                    key={activeZone.id}
                     polygons={activeZone.spots}
                     stateFilter={stateFilter}
                     selectedPolygonId={
@@ -833,6 +1023,19 @@ export function DashboardView({ wsUrl }) {
                     }
                     showGuidancePath={false}
                     assignmentConflict={effectiveStatus === "conflict"}
+                    assignment={hasLiveAssignedSpot ? assignment : null}
+                    effectiveStatus={effectiveStatus}
+                    formattedTime={formattedTime}
+                    isStaffRestricted={isStaffRestricted}
+                    isRequesting={isRequesting}
+                    showContextBar={true}
+                    onReserveSlot={handleReserveSpecificSlot}
+                    onConfirmArrival={handleConfirmArrival}
+                    onReleaseAssignment={handleCancelAssignment}
+                    onOpenGuidance={() => {
+                      stopVoiceState();
+                      setActiveView("guidance");
+                    }}
                   />
                 </div>
               )
@@ -841,7 +1044,7 @@ export function DashboardView({ wsUrl }) {
         )}
       </div>
 
-      {/* Navbar flotante inferior tipo píldora (4 elementos) */}
+      {/* Navbar flotante inferior tipo cápsula (border-radius: 9999px + blur 18px) */}
       <div className="pf-floating-nav-wrapper">
         <nav className="pf-floating-nav" aria-label="Navegación rápida ParkFlow">
           <button
@@ -855,12 +1058,33 @@ export function DashboardView({ wsUrl }) {
             }}
           >
             <span className="pf-nav-icon-circle" aria-hidden="true">
-              ◫
+              <LayoutGridIcon size={17} />
             </span>
             <span>Zonas</span>
           </button>
 
-          {assignment ? (
+          <button
+            type="button"
+            className="pf-nav-item"
+            data-active={activeView === "explore" && selectedZoneId !== null}
+            onClick={() => {
+              stopVoiceState();
+              setActiveView("explore");
+              if (selectedZoneId === null) {
+                const targetZone = bestZone || activeLot?.zones?.[0];
+                if (targetZone) {
+                  handleOpenZone(targetZone);
+                }
+              }
+            }}
+          >
+            <span className="pf-nav-icon-circle" aria-hidden="true">
+              <ParkingSquareIcon size={17} />
+            </span>
+            <span>Croquis</span>
+          </button>
+
+          {assignment && (
             <button
               type="button"
               className="pf-nav-item"
@@ -871,7 +1095,7 @@ export function DashboardView({ wsUrl }) {
               }}
             >
               <span className="pf-nav-icon-circle" aria-hidden="true">
-                🧭
+                <NavigationIcon size={17} />
                 {(effectiveStatus === "active" ||
                   effectiveStatus === "conflict") && (
                   <span
@@ -882,40 +1106,7 @@ export function DashboardView({ wsUrl }) {
               </span>
               <span>Mi guía</span>
             </button>
-          ) : (
-            <button
-              type="button"
-              className="pf-nav-item"
-              data-active={activeView === "explore" && selectedZoneId !== null}
-              onClick={() => {
-                stopVoiceState();
-                setActiveView("explore");
-                if (selectedZoneId === null && bestZone) {
-                  handleOpenZone(bestZone);
-                }
-              }}
-            >
-              <span className="pf-nav-icon-circle" aria-hidden="true">
-                🅿
-              </span>
-              <span>Croquis</span>
-            </button>
           )}
-
-          <button
-            type="button"
-            className="pf-nav-item"
-            data-active={userRole === "staff"}
-            aria-pressed={userRole === "staff"}
-            onClick={() =>
-              setUserRole((prev) => (prev === "student" ? "staff" : "student"))
-            }
-          >
-            <span className="pf-nav-icon-circle" aria-hidden="true">
-              {userRole === "staff" ? "🪪" : "🎓"}
-            </span>
-            <span>{userRole === "staff" ? "Personal" : "Estudiante"}</span>
-          </button>
 
           <button
             type="button"
@@ -925,12 +1116,32 @@ export function DashboardView({ wsUrl }) {
             onClick={() => setTechnicalMode((prev) => !prev)}
           >
             <span className="pf-nav-icon-circle" aria-hidden="true">
-              ⚙
+              <SlidersIcon size={17} />
             </span>
             <span>Técnico</span>
           </button>
         </nav>
       </div>
+
+      {/* Bottom sheet de Modo Demo (abierto desde el pill Demo / En vivo del header) */}
+      <DemoBottomSheet
+        open={demoSheetOpen}
+        onClose={() => setDemoSheetOpen(false)}
+        connected={connected}
+        userRole={userRole}
+        onChangeRole={setUserRole}
+        simulateHighOccupancy={simulateHighOccupancy}
+        onToggleHighOccupancy={() =>
+          setSimulateHighOccupancy((prev) => !prev)
+        }
+        technicalMode={technicalMode}
+        onToggleTechnicalMode={() => setTechnicalMode((prev) => !prev)}
+        hasActiveAssignment={Boolean(
+          assignment && effectiveStatus === "active"
+        )}
+        onSimulateShortTimer={simulateShortTimer}
+        onSimulateExternalOccupancy={simulateExternalOccupancy}
+      />
     </main>
   );
 }
