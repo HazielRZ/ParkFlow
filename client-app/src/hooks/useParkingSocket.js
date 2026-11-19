@@ -162,9 +162,14 @@ export function useParkingSocket(wsUrl) {
           const payload = JSON.parse(event.data);
           if (payload.event === "parking_state_updated") {
             const lotId = payload.parking_lot_id || "ITM-CAMPUS1-EST-NORTE";
-            const incomingPolygons = Array.isArray(payload.polygons)
+            const rawPolygons = Array.isArray(payload.polygons)
               ? payload.polygons
               : [];
+            const incomingPolygons = rawPolygons.map((poly) =>
+              poly && payload.camera_id && !poly.camera_id
+                ? { ...poly, camera_id: payload.camera_id }
+                : poly
+            );
 
             setParkingState((prev) => {
               const previousLotPolygons = prev.polygonsByLot[lotId] || [];
