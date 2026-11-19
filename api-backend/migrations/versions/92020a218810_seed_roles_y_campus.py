@@ -28,6 +28,6 @@ def upgrade():
         {"code": "ITM-CAMPUS2", "name": "Campus 2"},
     ])
 
-def downgrade() -> None:
-    """Downgrade schema."""
-    pass
+def downgrade():
+    op.execute("DELETE FROM campuses WHERE code IN ('ITM-CAMPUS1','ITM-CAMPUS2')")
+    op.execute("DELETE FROM roles")
