@@ -1,10 +1,14 @@
 /**
- * Mapa SVG interactivo de cajones con carril central y vista cenital (PF-19 / INT-UI-01 / RF-01).
+ * Mapa SVG interactivo Nivel 3 (Micro — Croquis detallado de 1 zona con 12–16 cajones).
+ * Reutiliza la vista cenital con carril central y soporta Modo Conductor / Modo Técnico.
  * Adaptado al Manual de Identidad Gráfica del TecNM (Pantone 294 C #1B396A).
  * Licencia: PolyForm Noncommercial License 1.0.0
  */
 
 import React, { useState } from "react";
+import { CAMPUS_ZONES } from "../data/campusLots.js";
+
+export { CAMPUS_ZONES };
 
 export const STATE_BADGE_COLORS = {
   Libre: "#16a34a",
@@ -40,66 +44,11 @@ export const VEHICLE_LABELS = {
   bus: "Autobús (bus)",
 };
 
-export const CAMPUS_ZONES = [
-  {
-    id: "ITM-CAMPUS1-EST-NORTE",
-    shortName: "Campus 1 • Norte",
-    name: "Campus 1 — Estacionamiento Norte (Sistemas / Edif. K)",
-    bays: ["Bloque A (Poniente)", "Bloque B (Oriente)"],
-    defaultSlots: [
-      { polygon_id: "poly-itm-a01", slot_name: "A-01", state: "Libre", confidence: 0.96, iou_ratio: 0.04, vehicle_type: null },
-      { polygon_id: "poly-itm-a02", slot_name: "A-02", state: "Ocupado", confidence: 0.94, iou_ratio: 0.78, vehicle_type: "car" },
-      { polygon_id: "poly-itm-a03", slot_name: "A-03", state: "Libre", confidence: 0.97, iou_ratio: 0.02, vehicle_type: null },
-      { polygon_id: "poly-itm-a04", slot_name: "A-04", state: "Ocupado", confidence: 0.91, iou_ratio: 0.81, vehicle_type: "truck" },
-      { polygon_id: "poly-itm-b01", slot_name: "B-01", state: "En maniobra", confidence: 0.88, iou_ratio: 0.36, vehicle_type: "car" },
-      { polygon_id: "poly-itm-b02", slot_name: "B-02", state: "Libre", confidence: 0.95, iou_ratio: 0.05, vehicle_type: null },
-      { polygon_id: "poly-itm-b03", slot_name: "B-03", state: "Ocupado", confidence: 0.93, iou_ratio: 0.74, vehicle_type: "motorcycle" },
-      { polygon_id: "poly-itm-b04", slot_name: "B-04", state: "Libre", confidence: 0.98, iou_ratio: 0.01, vehicle_type: null },
-      { polygon_id: "poly-itm-001", slot_name: "C-01", state: "En maniobra", confidence: 0.89, iou_ratio: 0.38, vehicle_type: "car" },
-      { polygon_id: "poly-itm-002", slot_name: "C-02", state: "Ocupado", confidence: 0.95, iou_ratio: 0.84, vehicle_type: "car" },
-      { polygon_id: "poly-itm-003", slot_name: "C-03", state: "Libre", confidence: 0.96, iou_ratio: 0.03, vehicle_type: null },
-      { polygon_id: "poly-itm-004", slot_name: "C-04", state: "Ocupado", confidence: 0.92, iou_ratio: 0.79, vehicle_type: "car" },
-    ],
-  },
-  {
-    id: "ITM-CAMPUS1-EST-SUR",
-    shortName: "Campus 1 • Sur",
-    name: "Campus 1 — Estacionamiento Sur (Av. Tecnológico)",
-    bays: ["Bloque D (Poniente)", "Bloque E (Oriente)"],
-    defaultSlots: [
-      { polygon_id: "poly-sur-d01", slot_name: "D-01", state: "Ocupado", confidence: 0.95, iou_ratio: 0.82, vehicle_type: "car" },
-      { polygon_id: "poly-sur-d02", slot_name: "D-02", state: "Ocupado", confidence: 0.93, iou_ratio: 0.77, vehicle_type: "car" },
-      { polygon_id: "poly-sur-d03", slot_name: "D-03", state: "Libre", confidence: 0.97, iou_ratio: 0.03, vehicle_type: null },
-      { polygon_id: "poly-sur-d04", slot_name: "D-04", state: "En maniobra", confidence: 0.86, iou_ratio: 0.34, vehicle_type: "truck" },
-      { polygon_id: "poly-sur-e01", slot_name: "E-01", state: "Libre", confidence: 0.96, iou_ratio: 0.04, vehicle_type: null },
-      { polygon_id: "poly-sur-e02", slot_name: "E-02", state: "Ocupado", confidence: 0.91, iou_ratio: 0.75, vehicle_type: "motorcycle" },
-      { polygon_id: "poly-sur-e03", slot_name: "E-03", state: "Libre", confidence: 0.98, iou_ratio: 0.02, vehicle_type: null },
-      { polygon_id: "poly-sur-e04", slot_name: "E-04", state: "Libre", confidence: 0.95, iou_ratio: 0.05, vehicle_type: null },
-    ],
-  },
-  {
-    id: "ITM-CAMPUS2-EST-CENTRAL",
-    shortName: "Campus 2 • Central",
-    name: "Campus 2 — Estacionamiento Central",
-    bays: ["Bloque N (Poniente)", "Bloque S (Oriente)"],
-    defaultSlots: [
-      { polygon_id: "poly-c2-n01", slot_name: "N-01", state: "Libre", confidence: 0.97, iou_ratio: 0.02, vehicle_type: null },
-      { polygon_id: "poly-c2-n02", slot_name: "N-02", state: "Libre", confidence: 0.96, iou_ratio: 0.04, vehicle_type: null },
-      { polygon_id: "poly-c2-n03", slot_name: "N-03", state: "Ocupado", confidence: 0.92, iou_ratio: 0.79, vehicle_type: "car" },
-      { polygon_id: "poly-c2-n04", slot_name: "N-04", state: "Libre", confidence: 0.98, iou_ratio: 0.01, vehicle_type: null },
-      { polygon_id: "poly-c2-s01", slot_name: "S-01", state: "En maniobra", confidence: 0.87, iou_ratio: 0.31, vehicle_type: "car" },
-      { polygon_id: "poly-c2-s02", slot_name: "S-02", state: "Ocupado", confidence: 0.94, iou_ratio: 0.83, vehicle_type: "bus" },
-      { polygon_id: "poly-c2-s03", slot_name: "S-03", state: "Libre", confidence: 0.95, iou_ratio: 0.06, vehicle_type: null },
-      { polygon_id: "poly-c2-s04", slot_name: "S-04", state: "Libre", confidence: 0.97, iou_ratio: 0.02, vehicle_type: null },
-    ],
-  },
-];
-
 /**
  * Distribuye los cajones en 2 bloques laterales (A a la izquierda, B a la derecha)
- * separados por el carril central vertical (Regla 5).
+ * separados por el carril central vertical.
  */
-function computeCentralLaneSlotGeometry(index) {
+export function computeCentralLaneSlotGeometry(index) {
   const isRightBlock = index % 2 === 1;
   const row = Math.floor(index / 2);
 
@@ -115,7 +64,7 @@ function computeCentralLaneSlotGeometry(index) {
 }
 
 /**
- * Vista superior cenital de automóvil en gris para cajones ocupados (Regla 5).
+ * Vista superior cenital de automóvil en gris para cajones ocupados.
  */
 function renderTopDownCarSvg(x, y, width) {
   const carW = 86;
@@ -170,6 +119,12 @@ export function ParkingGrid({
   selectedPolygonId: controlledSelectedId,
   onSelectSlot,
   zoneName = "Mapa de Cajones de Estacionamiento",
+  laneLabel = "ENTRADA ITM",
+  cameraId = null,
+  technicalMode = false,
+  assignedPolygonId = null,
+  showGuidancePath = false,
+  assignmentConflict = false,
 }) {
   const [internalSelectedId, setInternalSelectedId] = useState(null);
   const activeSelectedId =
@@ -186,13 +141,33 @@ export function ParkingGrid({
     }
   };
 
-  const selectedSlot =
-    polygons.find((item) => item.polygon_id === activeSelectedId) ||
-    polygons[0] ||
-    null;
+  const handleClearSelection = () => {
+    if (controlledSelectedId === undefined) {
+      setInternalSelectedId(null);
+    }
+    if (onSelectSlot) {
+      onSelectSlot(null);
+    }
+  };
+
+  const explicitSlot = activeSelectedId
+    ? polygons.find((item) => item.polygon_id === activeSelectedId) || null
+    : null;
+  const technicalSlot = explicitSlot || polygons[0] || null;
+
+  const assignedIndex = assignedPolygonId
+    ? polygons.findIndex((item) => item.polygon_id === assignedPolygonId)
+    : -1;
+  const assignedGeom =
+    assignedIndex >= 0 ? computeCentralLaneSlotGeometry(assignedIndex) : null;
 
   const rowsCount = Math.max(1, Math.ceil(polygons.length / 2));
   const svgHeight = Math.max(320, 54 + rowsCount * 82 + 28);
+
+  const arrowPositions = Array.from(
+    { length: rowsCount },
+    (_, idx) => 88 + idx * 82
+  ).filter((y) => y < svgHeight - 40);
 
   return (
     <section
@@ -209,21 +184,21 @@ export function ParkingGrid({
               className="pf-legend-swatch"
               style={{ backgroundColor: STATE_BADGE_COLORS.Libre }}
             />
-            ✓ Libre (Código)
+            ✓ Libre
           </span>
           <span className="pf-legend-item">
             <span
               className="pf-legend-swatch"
               style={{ backgroundColor: STATE_BADGE_COLORS["En maniobra"] }}
             />
-            ◐ En maniobra
+            ◐ Maniobra
           </span>
           <span className="pf-legend-item">
             <span
               className="pf-legend-swatch"
               style={{ backgroundColor: STATE_BADGE_COLORS.Ocupado }}
             />
-            ✕ Ocupado (Auto)
+            ✕ Ocupado
           </span>
         </div>
       </div>
@@ -269,7 +244,7 @@ export function ParkingGrid({
             BLOQUE B
           </text>
 
-          {/* Regla 5: Carril central de entrada con flechas punteadas */}
+          {/* Carril central de entrada con flechas punteadas dinámicas */}
           <rect
             x="212"
             y="16"
@@ -283,10 +258,10 @@ export function ParkingGrid({
             y="35"
             textAnchor="middle"
             fill="var(--accent-text)"
-            fontSize="10"
+            fontSize="9.5"
             fontWeight="700"
           >
-            ENTRADA ITM
+            {laneLabel}
           </text>
           <line
             x1="270"
@@ -297,33 +272,52 @@ export function ParkingGrid({
             strokeWidth="2"
             strokeDasharray="6 6"
           />
-          {/* Puntas de flecha en el carril central */}
-          <path
-            d="M264 90 L270 100 L276 90 M264 190 L270 200 L276 190 M264 290 L270 300 L276 290"
-            fill="none"
-            stroke="var(--text-muted)"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
+          {arrowPositions.map((arrowY) => (
+            <path
+              key={arrowY}
+              d={`M264 ${arrowY} L270 ${arrowY + 10} L276 ${arrowY}`}
+              fill="none"
+              stroke="var(--text-muted)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          ))}
 
           {/* Cajones organizados en bloques laterales */}
           {polygons.map((slot, index) => {
             const geom = computeCentralLaneSlotGeometry(index);
             const cfg = STATE_CONFIG[slot.state] || STATE_CONFIG.Libre;
+            const isAssigned = Boolean(
+              assignedPolygonId && slot.polygon_id === assignedPolygonId
+            );
+            const isAssignedConflict = isAssigned && assignmentConflict;
             const matchesFilter =
-              stateFilter === "Todos" || slot.state === stateFilter;
+              stateFilter === "Todos" || slot.state === stateFilter || isAssigned;
             const isSelected = activeSelectedId === slot.polygon_id;
 
-            const slotFill = isSelected
-              ? "var(--accent-soft)"
-              : "var(--map-slot-bg)";
-            const slotStroke = isSelected
-              ? "var(--accent-border)"
-              : slot.state === "En maniobra"
-                ? "#d97706"
-                : "var(--border-subtle)";
-            const slotStrokeWidth = isSelected ? "2" : "1.5";
+            const slotFill = isAssignedConflict
+              ? "var(--status-danger-bg)"
+              : isAssigned
+                ? "var(--guidance-spot-bg)"
+                : isSelected
+                  ? "var(--accent-soft)"
+                  : "var(--map-slot-bg)";
+            const slotStroke = isAssignedConflict
+              ? "var(--status-danger)"
+              : isAssigned
+                ? "var(--guidance-spot-border)"
+                : isSelected
+                  ? "var(--accent-border)"
+                  : slot.state === "En maniobra"
+                    ? "#d97706"
+                    : "var(--border-subtle)";
+            const slotStrokeWidth =
+              isAssigned || isSelected ? "2.5" : "1.5";
+            const ariaDetail = technicalMode
+              ? `, confianza ${Math.round((slot.confidence || 0) * 100)} por ciento`
+              : "";
+            const ariaAssigned = isAssigned ? ", tu cajón asignado" : "";
 
             return (
               <g
@@ -331,11 +325,10 @@ export function ParkingGrid({
                 className="pf-slot-group"
                 role="button"
                 tabIndex={0}
-                aria-label={`Cajón ${slot.slot_name}, estado ${slot.state}, confianza ${Math.round(
-                  (slot.confidence || 0) * 100
-                )} por ciento`}
+                aria-label={`Cajón ${slot.slot_name}, estado ${slot.state}${ariaAssigned}${ariaDetail}`}
                 aria-pressed={isSelected}
                 data-slot-state={slot.state}
+                data-assigned={isAssigned ? "true" : undefined}
                 data-polygon-id={slot.polygon_id}
                 style={{ opacity: matchesFilter ? 1 : 0.22 }}
                 onClick={() => handleSelect(slot)}
@@ -346,7 +339,6 @@ export function ParkingGrid({
                   }
                 }}
               >
-                {/* Superficie del cajón (Regla 5: seleccionado con borde 2px en --accent-text y fondo --accent-soft) */}
                 <rect
                   x={geom.x}
                   y={geom.y}
@@ -356,11 +348,64 @@ export function ParkingGrid({
                   fill={slotFill}
                   stroke={slotStroke}
                   strokeWidth={slotStrokeWidth}
-                  strokeDasharray={isSelected ? "none" : cfg.dashArray}
+                  strokeDasharray={
+                    isAssignedConflict
+                      ? "6 4"
+                      : isAssigned || isSelected
+                        ? "none"
+                        : cfg.dashArray
+                  }
                 />
 
-                {/* Contenido visual según estado (Regla 5) */}
-                {slot.state === "Ocupado" ? (
+                {isAssigned && !isAssignedConflict ? (
+                  <>
+                    <text
+                      x={geom.x + geom.width / 2}
+                      y={geom.y + 32}
+                      textAnchor="middle"
+                      fill="var(--accent-text)"
+                      fontSize="19"
+                      fontWeight="800"
+                    >
+                      {slot.slot_name}
+                    </text>
+                    <text
+                      x={geom.x + geom.width / 2}
+                      y={geom.y + 52}
+                      textAnchor="middle"
+                      fill="var(--guidance-route)"
+                      fontSize="10.5"
+                      fontWeight="800"
+                    >
+                      {slot.state === "En maniobra"
+                        ? "★ TU LUGAR • MANIOBRA"
+                        : "★ TU LUGAR"}
+                    </text>
+                  </>
+                ) : isAssignedConflict && slot.state !== "Ocupado" ? (
+                  <>
+                    <text
+                      x={geom.x + geom.width / 2}
+                      y={geom.y + 32}
+                      textAnchor="middle"
+                      fill="var(--text-primary)"
+                      fontSize="18"
+                      fontWeight="800"
+                    >
+                      {slot.slot_name}
+                    </text>
+                    <text
+                      x={geom.x + geom.width / 2}
+                      y={geom.y + 52}
+                      textAnchor="middle"
+                      fill="var(--status-danger)"
+                      fontSize="10.5"
+                      fontWeight="800"
+                    >
+                      ⚠ CONFLICTO
+                    </text>
+                  </>
+                ) : slot.state === "Ocupado" ? (
                   <>
                     {renderTopDownCarSvg(geom.x, geom.y, geom.width)}
                     <text
@@ -376,11 +421,11 @@ export function ParkingGrid({
                       x={geom.x + geom.width - 12}
                       y={geom.y + geom.height - 7}
                       textAnchor="end"
-                      fill="#dc2626"
+                      fill="var(--status-danger)"
                       fontSize="10"
                       fontWeight="700"
                     >
-                      ✕ OCUPADO
+                      {isAssignedConflict ? "⚠ OCUPADO" : "✕ OCUPADO"}
                     </text>
                   </>
                 ) : slot.state === "En maniobra" ? (
@@ -399,16 +444,17 @@ export function ParkingGrid({
                       x={geom.x + geom.width / 2}
                       y={geom.y + 50}
                       textAnchor="middle"
-                      fill="#d97706"
+                      fill="var(--status-warning)"
                       fontSize="11"
                       fontWeight="700"
                     >
-                      ◐ EN MANIOBRA ({Math.round((slot.iou_ratio || 0) * 100)}%)
+                      {technicalMode
+                        ? `◐ MANIOBRA (${Math.round((slot.iou_ratio || 0) * 100)}%)`
+                        : "◐ EN MANIOBRA"}
                     </text>
                   </>
                 ) : (
                   <>
-                    {/* Regla 5: Cajones libres muestran su código claramente */}
                     <text
                       x={geom.x + geom.width / 2}
                       y={geom.y + 34}
@@ -423,7 +469,7 @@ export function ParkingGrid({
                       x={geom.x + geom.width / 2}
                       y={geom.y + 52}
                       textAnchor="middle"
-                      fill="#16a34a"
+                      fill="var(--status-success)"
                       fontSize="11"
                       fontWeight="700"
                     >
@@ -434,36 +480,139 @@ export function ParkingGrid({
               </g>
             );
           })}
+
+          {/* Trayectoria animada desde la entrada del carril hasta el cajón asignado */}
+          {showGuidancePath && assignedGeom && (() => {
+            const laneX = 270;
+            const centerY = assignedGeom.y + assignedGeom.height / 2;
+            const curveRadius = 22;
+            const turnStartY = Math.max(54, centerY - curveRadius);
+            const endX = assignedGeom.isRightBlock
+              ? assignedGeom.x - 4
+              : assignedGeom.x + assignedGeom.width + 4;
+            const curveEndX = assignedGeom.isRightBlock
+              ? laneX + curveRadius
+              : laneX - curveRadius;
+            const pathD = `M ${laneX} 46 L ${laneX} ${turnStartY} Q ${laneX} ${centerY} ${curveEndX} ${centerY} L ${endX} ${centerY}`;
+            const arrowD = assignedGeom.isRightBlock
+              ? `M ${endX - 9} ${centerY - 6} L ${endX} ${centerY} L ${endX - 9} ${centerY + 6}`
+              : `M ${endX + 9} ${centerY - 6} L ${endX} ${centerY} L ${endX + 9} ${centerY + 6}`;
+            const beaconX = assignedGeom.isRightBlock
+              ? assignedGeom.x + 14
+              : assignedGeom.x + assignedGeom.width - 14;
+            const beaconY = assignedGeom.y + 14;
+            const routeStroke = assignmentConflict
+              ? "var(--status-danger)"
+              : "var(--guidance-route)";
+
+            return (
+              <g className="pf-guidance-overlay" aria-hidden="true">
+                <path
+                  d={pathD}
+                  className="pf-guidance-route-glow"
+                  fill="none"
+                  stroke={assignmentConflict ? "var(--status-danger-bg)" : "var(--guidance-route-glow)"}
+                  strokeWidth="12"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d={pathD}
+                  className="pf-guidance-route-path"
+                  fill="none"
+                  stroke={routeStroke}
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray="10 7"
+                />
+                <circle cx={laneX} cy={46} r="5" fill={routeStroke} />
+                <path
+                  d={arrowD}
+                  fill="none"
+                  stroke={routeStroke}
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                {!assignmentConflict && (
+                  <circle
+                    cx={beaconX}
+                    cy={beaconY}
+                    r="5"
+                    className="pf-spot-beacon"
+                    fill={routeStroke}
+                  />
+                )}
+              </g>
+            );
+          })()}
         </svg>
       </div>
 
-      {/* Tarjeta inferior de detalle del cajón seleccionado */}
-      {selectedSlot && (
+      {/* Vista Conductor: pill mínima sin telemetría técnica */}
+      {!technicalMode && explicitSlot && (
+        <div
+          className="pf-driver-slot-chip"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="pf-driver-slot-info">
+            <span
+              className="pf-state-pill"
+              style={{
+                backgroundColor:
+                  STATE_BADGE_COLORS[explicitSlot.state] || "#64748b",
+              }}
+            >
+              {(STATE_CONFIG[explicitSlot.state] || {}).icon || "•"}{" "}
+              {explicitSlot.state}
+            </span>
+            <strong>Cajón {explicitSlot.slot_name}</strong>
+          </span>
+          <button
+            type="button"
+            className="pf-chip-close"
+            onClick={handleClearSelection}
+            aria-label="Cerrar selección de cajón"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Vista Técnica / Admin: telemetría completa de YOLO + IoU */}
+      {technicalMode && technicalSlot && (
         <article
           className="pf-detail-sheet"
           role="region"
           aria-live="polite"
-          aria-label={`Detalle del cajón ${selectedSlot.slot_name}`}
-          data-slot-state={selectedSlot.state}
+          aria-label={`Telemetría técnica del cajón ${technicalSlot.slot_name}`}
+          data-slot-state={technicalSlot.state}
         >
           <div className="pf-detail-header">
             <div>
               <h3 className="pf-detail-title">
-                Cajón {selectedSlot.slot_name}{" "}
+                Cajón {technicalSlot.slot_name}{" "}
                 <small style={{ fontWeight: 500, color: "var(--text-muted)" }}>
-                  ({selectedSlot.polygon_id})
+                  ({technicalSlot.polygon_id})
                 </small>
               </h3>
+              {cameraId && (
+                <small style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                  Cámara: {cameraId}
+                </small>
+              )}
             </div>
             <span
               className="pf-state-pill"
               style={{
                 backgroundColor:
-                  STATE_BADGE_COLORS[selectedSlot.state] || "#64748b",
+                  STATE_BADGE_COLORS[technicalSlot.state] || "#64748b",
               }}
             >
-              {(STATE_CONFIG[selectedSlot.state] || {}).icon || "•"}{" "}
-              {selectedSlot.state}
+              {(STATE_CONFIG[technicalSlot.state] || {}).icon || "•"}{" "}
+              {technicalSlot.state}
             </span>
           </div>
 
@@ -471,23 +620,23 @@ export function ParkingGrid({
             <div className="pf-detail-item">
               <strong>Tipo de vehículo</strong>
               <span>
-                {selectedSlot.vehicle_type
-                  ? VEHICLE_LABELS[selectedSlot.vehicle_type] ||
-                    selectedSlot.vehicle_type
+                {technicalSlot.vehicle_type
+                  ? VEHICLE_LABELS[technicalSlot.vehicle_type] ||
+                    technicalSlot.vehicle_type
                   : "Sin vehículo (null)"}
               </span>
             </div>
             <div className="pf-detail-item">
               <strong>Estado reportado</strong>
-              <span>{selectedSlot.state}</span>
+              <span>{technicalSlot.state}</span>
             </div>
             <div className="pf-detail-item">
               <strong>Intersección (IoU)</strong>
-              <span>{(selectedSlot.iou_ratio * 100).toFixed(1)}%</span>
+              <span>{((technicalSlot.iou_ratio || 0) * 100).toFixed(1)}%</span>
             </div>
             <div className="pf-detail-item">
               <strong>Confianza YOLO</strong>
-              <span>{(selectedSlot.confidence * 100).toFixed(1)}%</span>
+              <span>{((technicalSlot.confidence || 0) * 100).toFixed(1)}%</span>
             </div>
           </div>
         </article>
