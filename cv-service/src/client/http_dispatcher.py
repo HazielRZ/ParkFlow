@@ -26,11 +26,17 @@ class InferenceHttpDispatcher:
         backend_base_url: Optional[str] = None,
         schema_path: Optional[Path] = None,
         timeout_seconds: float = 5.0,
+        internal_api_key: Optional[str] = None,
     ) -> None:
         self.backend_base_url = (
             backend_base_url or os.getenv("PARKFLOW_BACKEND_URL", "http://api-backend:8000")
         ).rstrip("/")
         self.timeout_seconds = timeout_seconds
+        self.internal_api_key = (
+            internal_api_key
+            if internal_api_key is not None
+            else os.getenv("PARKFLOW_INTERNAL_API_KEY", "").strip()
+        )
         self._validator: Optional[Draft202012Validator] = None
 
         resolved_schema_path = schema_path or self._resolve_default_schema_path()
@@ -70,13 +76,16 @@ class InferenceHttpDispatcher:
         """Envía el payload mediante POST `/api/v1/inference/states` hacia `/api-backend`."""
         body = self.build_and_validate_payload(payload)
         endpoint = f"{self.backend_base_url}{self.INGESTION_PATH}"
+        headers = {}
+        if self.internal_api_key:
+            headers["X-Internal-API-Key"] = self.internal_api_key
 
         if client is not None:
-            response = client.post(endpoint, json=body, timeout=self.timeout_seconds)
+            response = client.post(endpoint, json=body, headers=headers, timeout=self.timeout_seconds)
             response.raise_for_status()
             return response
 
-        with httpx.Client(timeout=self.timeout_seconds) as session:
+        with httpx.Client(timeout=self.timeout_seconds, headers=headers) as session:
             response = session.post(endpoint, json=body)
             response.raise_for_status()
             return response

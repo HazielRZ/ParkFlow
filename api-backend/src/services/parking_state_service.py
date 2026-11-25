@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+import json
+import logging
+import math
+import os
+from collections import deque
 from dataclasses import replace
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Deque, Dict, List, Optional
 
 from src.models.entities import ParkingSlotRecord
 from src.services.audit_service import AuditoriaService
 from src.websocket.gateway import WebSocketBroadcastGateway
+
+logger = logging.getLogger("api-backend.inference")
 
 
 class ParkingStateService:
@@ -25,15 +32,68 @@ class ParkingStateService:
         self._auditoria = auditoria
         self._slots_by_lot: Dict[str, Dict[str, ParkingSlotRecord]] = {}
         self._barrier_net_flow: Dict[str, int] = {}
+        self._latency_samples: Deque[float] = deque(maxlen=1000)
+        self._sla_violations: int = 0
+        self._last_latency_ms: float = 0.0
+        self._state_history: List[dict[str, Any]] = []
 
-    async def process_inference_event(self, validated_payload: dict[str, Any]) -> dict[str, Any]:
-        """Registra la actualización de polígonos respetando bloqueos manuales activos."""
+    @property
+    def last_latency_ms(self) -> float:
+        return self._last_latency_ms
+
+    @staticmethod
+    def _sla_threshold_ms() -> float:
+        return float(os.getenv("PARKFLOW_LATENCY_SLA_MS", "5000"))
+
+    async def process_inference_event(
+        self,
+        validated_payload: dict[str, Any],
+        *,
+        received_at: Optional[datetime] = None,
+    ) -> dict[str, Any]:
+        """Registra la actualización de polígonos, mide latencia RNF-01 y difunde por WS."""
         parking_lot_id: str = validated_payload["parking_lot_id"]
         camera_id: str = validated_payload["camera_id"]
         frame_sequence: int = validated_payload["frame_sequence"]
         ts = datetime.fromisoformat(
             str(validated_payload["timestamp"]).replace("Z", "+00:00")
         )
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+
+        received_dt = received_at or datetime.now(timezone.utc)
+        if received_dt.tzinfo is None:
+            received_dt = received_dt.replace(tzinfo=timezone.utc)
+
+        latency_ms = max(0.0, round((received_dt - ts).total_seconds() * 1000.0, 3))
+        sla_ms = self._sla_threshold_ms()
+        self._last_latency_ms = latency_ms
+        self._latency_samples.append(latency_ms)
+        if latency_ms > sla_ms:
+            self._sla_violations += 1
+            logger.warning(
+                json.dumps(
+                    {
+                        "event": "inference_latency_sla_exceeded",
+                        "parking_lot_id": parking_lot_id,
+                        "frame_sequence": frame_sequence,
+                        "latency_ms": latency_ms,
+                        "sla_threshold_ms": sla_ms,
+                    }
+                )
+            )
+        else:
+            logger.info(
+                json.dumps(
+                    {
+                        "event": "inference_event_processed",
+                        "parking_lot_id": parking_lot_id,
+                        "frame_sequence": frame_sequence,
+                        "polygons_count": len(validated_payload["polygons"]),
+                        "latency_ms": latency_ms,
+                    }
+                )
+            )
 
         lot_slots = self._slots_by_lot.setdefault(parking_lot_id, {})
         effective_polygons = []
@@ -41,6 +101,7 @@ class ParkingStateService:
         for poly in validated_payload["polygons"]:
             polygon_id = poly["polygon_id"]
             existente = lot_slots.get(polygon_id)
+            zone_id = poly.get("zone_id") or (existente.zone_id if existente else None)
 
             # RF-03: Si existe lock manual activo, ignorar inferencia automática
             if existente is not None and existente.manual_lock:
@@ -49,6 +110,8 @@ class ParkingStateService:
                     camera_id=camera_id,
                     frame_sequence=frame_sequence,
                     updated_at=ts,
+                    zone_id=zone_id,
+                    last_latency_ms=latency_ms,
                 )
                 lot_slots[polygon_id] = record
                 effective_polygons.append({
@@ -69,9 +132,27 @@ class ParkingStateService:
                 camera_id=camera_id,
                 frame_sequence=frame_sequence,
                 updated_at=ts,
+                zone_id=zone_id,
+                last_latency_ms=latency_ms,
                 manual_lock=False,
             )
             self._auditar_cambio_de_estado(existente, record)
+            if existente is None or existente.state != record.state:
+                self._state_history.append(
+                    {
+                        "parking_lot_id": parking_lot_id,
+                        "zone_id": zone_id,
+                        "polygon_id": polygon_id,
+                        "slot_name": record.slot_name,
+                        "previous_state": existente.state if existente else None,
+                        "state": record.state,
+                        "confidence": record.confidence,
+                        "iou_ratio": record.iou_ratio,
+                        "detected_at": validated_payload["timestamp"],
+                        "received_at": received_dt.isoformat().replace("+00:00", "Z"),
+                        "latency_ms": latency_ms,
+                    }
+                )
             lot_slots[polygon_id] = record
             effective_polygons.append(poly)
 
@@ -80,13 +161,50 @@ class ParkingStateService:
             {
                 "event": "parking_state_updated",
                 "parking_lot_id": parking_lot_id,
+                "camera_id": camera_id,
                 "timestamp": validated_payload["timestamp"],
+                "received_at": received_dt.isoformat().replace("+00:00", "Z"),
+                "latency_ms": latency_ms,
                 "frame_sequence": frame_sequence,
                 "polygons": effective_polygons,
                 "metrics": summary,
             }
         )
         return summary
+
+    def get_latency_metrics(self) -> dict[str, Any]:
+        """Devuelve estadísticas de latencia (p95, max, avg) para verificación RNF-01."""
+        sla_ms = self._sla_threshold_ms()
+        samples = sorted(self._latency_samples)
+        if not samples:
+            return {
+                "count": 0,
+                "last_ms": 0.0,
+                "avg_ms": 0.0,
+                "p95_ms": 0.0,
+                "max_ms": 0.0,
+                "sla_threshold_ms": sla_ms,
+                "sla_violations": self._sla_violations,
+                "within_sla": True,
+            }
+        p95_idx = min(len(samples) - 1, max(0, math.ceil(0.95 * len(samples)) - 1))
+        p95_ms = round(samples[p95_idx], 3)
+        max_ms = round(samples[-1], 3)
+        avg_ms = round(sum(samples) / len(samples), 3)
+        return {
+            "count": len(samples),
+            "last_ms": round(self._last_latency_ms, 3),
+            "avg_ms": avg_ms,
+            "p95_ms": p95_ms,
+            "max_ms": max_ms,
+            "sla_threshold_ms": sla_ms,
+            "sla_violations": self._sla_violations,
+            "within_sla": p95_ms <= sla_ms and max_ms <= sla_ms,
+        }
+
+    def get_state_history(self, limit: int = 100) -> List[dict[str, Any]]:
+        """Historial reciente de transiciones persistidas en memoria."""
+        return list(self._state_history[-max(1, limit):])
 
     def obtener_cajon(self, parking_lot_id: str, polygon_id: str) -> Optional[ParkingSlotRecord]:
         """Último estado conocido de un cajón, o `None` si nunca se ha reportado."""

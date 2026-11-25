@@ -1,0 +1,82 @@
+{
+  "parking_lot_id": "ITM-CAMPUS1-EST-NORTE",
+  "zone_id": "C1N-Z1",
+  "camera_id": "e6f4776b-3122-4a0b-857e-3c22db92dcb1",
+  "reference_width": 1280,
+  "reference_height": 720,
+  "normalized": false,
+  "spots": [
+    {
+      "spot_id": "poly-itm-a01",
+      "slot_name": "A-01",
+      "zone_id": "C1N-Z1",
+      "vertices": [[100, 90], [260, 90], [260, 230], [100, 230]]
+    },
+    {
+      "spot_id": "poly-itm-a02",
+      "slot_name": "A-02",
+      "zone_id": "C1N-Z1",
+      "vertices": [[320, 90], [480, 90], [480, 230], [320, 230]]
+    },
+    {
+      "spot_id": "poly-itm-a03",
+      "slot_name": "A-03",
+      "zone_id": "C1N-Z1",
+      "vertices": [[540, 90], [700, 90], [700, 230], [540, 230]]
+    },
+    {
+      "spot_id": "poly-itm-a04",
+      "slot_name": "A-04",
+      "zone_id": "C1N-Z1",
+      "vertices": [[760, 90], [920, 90], [920, 230], [760, 230]]
+    },
+    {
+      "spot_id": "poly-itm-b01",
+      "slot_name": "B-01",
+      "zone_id": "C1N-Z1",
+      "vertices": [[100, 280], [260, 280], [260, 420], [100, 420]]
+    },
+    {
+      "spot_id": "poly-itm-b02",
+      "slot_name": "B-02",
+      "zone_id": "C1N-Z1",
+      "vertices": [[320, 280], [480, 280], [480, 420], [320, 420]]
+    },
+    {
+      "spot_id": "poly-itm-b03",
+      "slot_name": "B-03",
+      "zone_id": "C1N-Z1",
+      "vertices": [[540, 280], [700, 280], [700, 420], [540, 420]]
+    },
+    {
+      "spot_id": "poly-itm-b04",
+      "slot_name": "B-04",
+      "zone_id": "C1N-Z1",
+      "vertices": [[760, 280], [920, 280], [920, 420], [760, 420]]
+    },
+    {
+      "spot_id": "poly-itm-001",
+      "slot_name": "C-01",
+      "zone_id": "C1N-Z1",
+      "vertices": [[100, 470], [260, 470], [260, 610], [100, 610]]
+    },
+    {
+      "spot_id": "poly-itm-002",
+      "slot_name": "C-02",
+      "zone_id": "C1N-Z1",
+      "vertices": [[320, 470], [480, 470], [480, 610], [320, 610]]
+    },
+    {
+      "spot_id": "poly-itm-003",
+      "slot_name": "C-03",
+      "zone_id": "C1N-Z1",
+      "vertices": [[540, 470], [700, 470], [700, 610], [540, 610]]
+    },
+    {
+      "spot_id": "poly-itm-004",
+      "slot_name": "C-04",
+      "zone_id": "C1N-Z1",
+      "vertices": [[760, 470], [920, 470], [920, 610], [760, 610]]
+    }
+  ]
+}

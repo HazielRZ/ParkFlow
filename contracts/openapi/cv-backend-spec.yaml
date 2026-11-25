@@ -36,8 +36,20 @@ paths:
                   received_at:
                     type: string
                     format: date-time
+                  latency_ms:
+                    type: number
+                    example: 14.2
+                  processed_polygons:
+                    type: integer
+                    example: 2
         '400':
           description: Carga útil inválida o incompatibilidad de contrato JSON.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Clave interna X-Internal-API-Key faltante o inválida cuando la autenticación interna está habilitada.
           content:
             application/json:
               schema:
@@ -95,6 +107,11 @@ components:
           type: string
           minLength: 1
           example: "poly-itm-001"
+        zone_id:
+          type: string
+          nullable: true
+          minLength: 1
+          example: "C1N-Z1"
         slot_name:
           type: string
           minLength: 1
