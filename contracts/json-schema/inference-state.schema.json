@@ -50,6 +50,11 @@
             "minLength": 1,
             "description": "Identificador unívoco del polígono del cajón."
           },
+          "zone_id": {
+            "type": ["string", "null"],
+            "minLength": 1,
+            "description": "Identificador opcional de la zona dentro del estacionamiento (ej. C1N-Z1)."
+          },
           "slot_name": {
             "type": "string",
             "minLength": 1,
