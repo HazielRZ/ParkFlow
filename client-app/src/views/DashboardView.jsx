@@ -19,6 +19,13 @@ import { SpotGuidanceView } from "../components/SpotGuidanceView.jsx";
 import { useParkingSocket } from "../hooks/useParkingSocket.js";
 import { useParkingAssignment } from "../hooks/useParkingAssignment.js";
 import { getEligibleLots } from "../utils/assignmentLogic.js";
+import { detectCurrentShift, SHIFT_NONE } from "../utils/shiftDetection.js";
+import {
+  CAMPUS_OPTIONS,
+  filterLotsByCampus,
+  readStoredCampus,
+  storeCampus,
+} from "../utils/campusPreference.js";
 import {
   buildAvailabilityAnnouncement,
   isSpeechSupported,
@@ -43,7 +50,12 @@ export function DashboardView({ wsUrl }) {
     attempt,
   } = useParkingSocket(wsUrl);
 
-  const [selectedLotId, setSelectedLotId] = useState(CAMPUS_LOTS[0].id);
+  const [selectedCampus, setSelectedCampus] = useState(() => readStoredCampus());
+  const [selectedLotId, setSelectedLotId] = useState(() => {
+    const campusLots = filterLotsByCampus(CAMPUS_LOTS, readStoredCampus());
+    return (campusLots[0] || CAMPUS_LOTS[0]).id;
+  });
+  const [currentShift, setCurrentShift] = useState(() => detectCurrentShift());
   const [selectedZoneId, setSelectedZoneId] = useState(null);
   const [stateFilter, setStateFilter] = useState("Todos");
   const [selectedSlot, setSelectedSlot] = useState(null);
@@ -62,6 +74,24 @@ export function DashboardView({ wsUrl }) {
   }, [theme]);
 
   useEffect(() => () => stopAvailabilitySpeech(), []);
+
+  // RF-02: turno automático por hora local; se refresca cada 30 s y al volver a la pestaña/PWA.
+  useEffect(() => {
+    const refreshShift = () => setCurrentShift(detectCurrentShift());
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        refreshShift();
+      }
+    };
+    const intervalId = setInterval(refreshShift, 30000);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", refreshShift);
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", refreshShift);
+    };
+  }, []);
 
   const baseResolvedLots = useMemo(
     () =>
@@ -131,11 +161,25 @@ export function DashboardView({ wsUrl }) {
     assignment ? "guidance" : "explore"
   );
 
+  // RF-02: solo se muestran los estacionamientos del campus elegido.
+  const visibleLots = useMemo(() => {
+    const filtered = filterLotsByCampus(resolvedLots, selectedCampus);
+    return filtered.length > 0 ? filtered : resolvedLots;
+  }, [resolvedLots, selectedCampus]);
+
   const activeLot = useMemo(
     () =>
-      resolvedLots.find((lot) => lot.id === selectedLotId) || resolvedLots[0],
-    [resolvedLots, selectedLotId]
+      visibleLots.find((lot) => lot.id === selectedLotId) || visibleLots[0],
+    [visibleLots, selectedLotId]
   );
+
+  // Si una asignación o sugerencia lleva a un lote de otro campus, el selector se sincroniza.
+  useEffect(() => {
+    const lot = resolvedLots.find((item) => item.id === selectedLotId);
+    if (lot?.campus && lot.campus !== selectedCampus) {
+      setSelectedCampus(lot.campus);
+    }
+  }, [resolvedLots, selectedLotId, selectedCampus]);
 
   const activeLotMetrics = useMemo(
     () => getLotMetrics(activeLot),
@@ -241,6 +285,23 @@ export function DashboardView({ wsUrl }) {
     stopAvailabilitySpeech();
     setIsSpeaking(false);
     setSpeechNotice("");
+  };
+
+  const handleSelectCampus = (campus) => {
+    if (campus === selectedCampus) {
+      return;
+    }
+    const firstLot = filterLotsByCampus(resolvedLots, campus)[0];
+    setSelectedCampus(campus);
+    storeCampus(campus);
+    if (firstLot) {
+      setSelectedLotId(firstLot.id);
+    }
+    setSelectedZoneId(null);
+    setSelectedSlot(null);
+    setStateFilter("Todos");
+    setSimulateHighOccupancy(false);
+    stopVoiceState();
   };
 
   const handleSelectLot = (lotId) => {
@@ -460,13 +521,43 @@ export function DashboardView({ wsUrl }) {
                 </p>
               )}
 
-              {/* Tabs tipo pill para los 4 estacionamientos */}
+              {/* RF-02: turno activo y selector rápido de campus */}
+              <div className="pf-campus-bar">
+                <span
+                  className="pf-shift-badge"
+                  data-active={String(currentShift !== SHIFT_NONE)}
+                  aria-live="polite"
+                  title="Turno detectado con la hora del dispositivo"
+                >
+                  <span aria-hidden="true">🕒</span>
+                  <span>Turno: {currentShift}</span>
+                </span>
+                <div
+                  className="pf-campus-toggle"
+                  role="group"
+                  aria-label="Seleccionar campus"
+                >
+                  {CAMPUS_OPTIONS.map((campus) => (
+                    <button
+                      key={campus}
+                      type="button"
+                      className="pf-campus-btn"
+                      aria-pressed={selectedCampus === campus}
+                      onClick={() => handleSelectCampus(campus)}
+                    >
+                      {campus}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tabs tipo pill para los estacionamientos del campus elegido */}
               <div
                 className="pf-lot-grid"
                 role="tablist"
                 aria-label="Estacionamientos del campus"
               >
-                {resolvedLots.map((lot) => {
+                {visibleLots.map((lot) => {
                   const isSelected = activeLot.id === lot.id;
                   const isStaffOnly = lot.access_type === "staff_only";
                   return (
