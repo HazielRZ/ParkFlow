@@ -210,6 +210,17 @@ class ParkingStateService:
         """Último estado conocido de un cajón, o `None` si nunca se ha reportado."""
         return self._slots_by_lot.get(parking_lot_id, {}).get(polygon_id)
 
+    def zonas_con_datos(self) -> List[str]:
+        """Zonas (`parking_lot_id`) con cajones reportados o pulsos de barrera."""
+        return sorted(set(self._slots_by_lot) | set(self._barrier_net_flow))
+
+    def cajones_de_zona(self, parking_lot_id: str) -> List[ParkingSlotRecord]:
+        """Último estado conocido de cada cajón de una zona, ordenado por nombre."""
+        return sorted(
+            self._slots_by_lot.get(parking_lot_id, {}).values(),
+            key=lambda cajon: cajon.slot_name,
+        )
+
     async def actualizar_estado_manual(
         self, parking_lot_id: str, polygon_id: str, estado: str, id_usuario: int
     ) -> Optional[ParkingSlotRecord]:

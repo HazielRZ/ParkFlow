@@ -9,7 +9,7 @@ Servicio backend construido con **FastAPI** responsable de:
 1. Recibir actualizaciones de estados por polígono en `POST /api/v1/inference/states`.
 2. Validar estrictamente en frontera (runtime) cada petición contra `contracts/json-schema/inference-state.schema.json`.
 3. Rechazar inmediatamente con **HTTP 422** cualquier estado fuera de `["Libre", "Ocupado", "En maniobra"]` o valores fuera de rango (`confidence`, `iou_ratio`), y responder **HTTP 202 Accepted** al encolar eventos válidos.
-4. Difundir los cambios de disponibilidad en tiempo real mediante **WebSockets** hacia `/client-app`.
+4. Difundir los cambios de disponibilidad en tiempo real mediante **WebSockets** hacia `/client-app` y los paneles LED, segmentados por campus y zona (≤ 3 s), y ofrecer un **snapshot REST** para la carga inicial.
 
 ## Estructura Interna
 
@@ -17,7 +17,7 @@ Servicio backend construido con **FastAPI** responsable de:
 api-backend/
 ├── src/
 │   ├── api/              # Endpoints REST e ingestión de inferencia (POST /api/v1/inference/states)
-│   ├── websocket/        # Gateway de broadcast en tiempo real hacia /client-app
+│   ├── websocket/        # ConnectionManager: difusión en tiempo real por campus y zona
 │   ├── services/         # Cálculo de ocupación y alertas de capacidad (RF-04)
 │   ├── models/           # Entidades de dominio y persistencia
 │   ├── security/         # JWT y guardias RBAC (RNF-02)
@@ -28,6 +28,30 @@ api-backend/
 ├── .dockerignore
 └── requirements.txt
 ```
+
+## Aforo en tiempo real (INT-COM-01 / RNF-01)
+
+Contrato completo: [`contracts/openapi/aforo-realtime-spec.yaml`](../contracts/openapi/aforo-realtime-spec.yaml). La lectura es **pública**: es disponibilidad, no gestión, y los paneles LED no pueden iniciar sesión.
+
+Una **zona** es el `parking_lot_id` de INT-SW-01 (igual que `Zone.code` en la BD) y empieza con el código de su **campus**: `ITM-CAMPUS1-EST-NORTE` pertenece a `ITM-CAMPUS1`. Los campus activos vienen de `PARKFLOW_CAMPUS_CODES` (separados por coma); si no se define, se usan los de la semilla (`ITM-CAMPUS1,ITM-CAMPUS2`).
+
+| Tipo | Ruta | Para qué |
+| :--- | :--- | :--- |
+| REST | `GET /api/aforo` | Snapshot de todos los campus |
+| REST | `GET /api/aforo/campus/{campus_id}` | Snapshot de un campus (carga inicial de la PWA o del panel LED) |
+| REST | `GET /api/aforo/campus/{campus_id}/zonas/{zona_id}` | Snapshot de una zona |
+| WebSocket | `/ws/parking-states` | Todos los eventos (canal global; lo sigue usando la PWA) |
+| WebSocket | `/ws/campus/{campus_id}` | Eventos de las zonas de ese campus |
+| WebSocket | `/ws/campus/{campus_id}/zonas/{zona_id}` | Eventos de una sola zona |
+
+- **Segmentación:** `ConnectionManager` (`src/websocket/gateway.py`) manda cada evento solo al canal global, al campus de la zona y a la zona. Los clientes de otro campus no lo reciben.
+- **Latencia ≤ 3 s:** el envío a los clientes es en paralelo y con tiempo límite de 1 s por cliente. Un cliente lento o caído no retrasa a los demás: se le cierra la conexión con el código `1013` y la PWA se reconecta sola.
+- **Carga inicial:** abrir primero el WebSocket y luego pedir el snapshot, para no perder un cambio que ocurra entre los dos. Los snapshots se responden con `Cache-Control: no-store`, para que el service worker de la PWA no sirva datos viejos.
+- **Prueba de estrés** (`tests/test_latencia_websocket.py`): levanta uvicorn real y mide la llegada de cada evento a cada cliente. Por defecto usa 200 clientes y 20 eventos; la carga se sube con variables de entorno:
+
+  ```bash
+  PARKFLOW_STRESS_CLIENTES=1000 PARKFLOW_STRESS_EVENTOS=50 python -m pytest tests/test_latencia_websocket.py -s
+  ```
 
 ## Autenticación y RBAC (RNF-02 / PF-16)
 
