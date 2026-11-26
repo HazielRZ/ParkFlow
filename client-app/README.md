@@ -21,12 +21,27 @@ Aplicación web móvil / PWA (React) aislada de la lógica interna del backend y
 2. **Nivel 2 — Mapa Esquemático Meso**: Bloques grandes tocables por zona/pasillo respetando la geometría real de cada estacionamiento, semáforo de disponibilidad y recomendación automática de la mejor zona o redirección desde zonas de personal.
 3. **Nivel 3 — Croquis Detallado Micro (Drill-down)**: Vista cenital SVG de los 12–16 cajones de la zona seleccionada, filtros por estado y soporte opcional de **Modo Técnico / Admin** para consultar `IoU` y `Confianza YOLO` (ocultos por defecto para conductores).
 
+### Alertas Automáticas de Saturación (`RF-04` • `CU-03`)
+- `SaturationBanner` y `saturationLogic.js` monitorean en tiempo real (vía WebSocket o modo demo) la ocupación de la zona activa, del estacionamiento seleccionado y del campus agregado:
+  - **`< 90%`**: El banner permanece oculto.
+  - **`>= 90%` y `< 100%`**: Muestra banner de advertencia ámbar **`"ESTACIONAMIENTO CASI LLENO"`** con porcentaje y cajones restantes.
+  - **`100%`**: Escala a banner crítico rojo **`"ESTACIONAMIENTO LLENO"`**.
+- **Recomendación dinámica**: Excluye la zona/lote actual y opciones al `100%`, omite lotes `staff_only` (`C1 • Edif. L`) para estudiantes, prioriza zonas/lotes del mismo campus con menor ocupación y salta a otro campus si todo el campus actual está saturado (o muestra mensaje de contingencia en el caso borde de `100%` global).
+- **Lectura por voz en transición**: Dispara `es-MX` únicamente al escalar de umbral (`<90% → >=90%`, `<90% → 100%`, `>=90% → 100%`) para evitar avisos repetidos en cada trama del WebSocket.
+
+#### Cómo simular los umbrales localmente
+1. **Desde la interfaz (Bottom Sheet de Modo Demo)**: Toca el pill **`Demo`** en la esquina superior derecha del encabezado (cuando no hay WebSocket conectado) y selecciona **`≥90%`** (simula saturación con 1 cajón libre en el lote actual), **`100%`** (lote actual al 100%), **`Campus 100%`** (caso borde de saturación global al 100%) o **`Normal`** para restaurar el estado base.
+2. **Por WebSocket (`parking_state_updated`)**: Envía una trama JSON con `polygons` donde el porcentaje de cajones en estado `"Ocupado"` sea `>= 90%` o `100%` para comprobar la activación inmediata en vivo.
+
 ## Estructura Interna
 
 ```text
 client-app/
 ├── src/
 │   ├── components/
+│   │   ├── DemoBottomSheet.jsx         # Panel deslizable de rol, simulación RF-04 y modo técnico
+│   │   ├── Icons.jsx                   # Iconografía vectorial SVG unificada
+│   │   ├── SaturationBanner.jsx        # Banner reactivo >= 90% y 100% (RF-04 / CU-03)
 │   │   ├── ZoneSchematicMap.jsx        # Nivel 2: Mapa esquemático por zonas reales ITM
 │   │   ├── ParkingGrid.jsx             # Nivel 3: Croquis SVG + trayectoria animada
 │   │   └── SpotGuidanceView.jsx        # Vista de guiado paso a paso, timer 15m y acciones
@@ -39,13 +54,16 @@ client-app/
 │   │   └── parkingAssignmentService.js # Persistencia local y adaptador listo para API REST
 │   ├── utils/
 │   │   ├── assignmentLogic.js          # Lógica pura de selección, caducidad y rutas
+│   │   ├── saturationLogic.js          # Cálculo de umbral >= 90%/100% y zona alterna
 │   │   └── speechAvailability.js       # Lectura por voz nativa (es-MX)
 │   ├── views/
 │   │   └── DashboardView.jsx           # Orquestación de solicitud, guiado y exploración
 │   └── index.js                        # Punto de entrada de la capa cliente
+├── style-agents.md                     # Guía estricta del Design System ParkFlow (TecNM)
 ├── tests/
 │   ├── campusLots.test.mjs             # Pruebas unitarias de modelo, adaptador y voz
-│   └── assignmentFlow.test.mjs         # Pruebas unitarias de asignación, timer, ruta y servicio
+│   ├── assignmentFlow.test.mjs         # Pruebas unitarias de asignación, timer, ruta y servicio
+│   └── saturationAlert.test.mjs        # Pruebas unitarias de umbrales RF-04 y zona alterna
 ├── Dockerfile
 ├── .dockerignore
 └── package.json

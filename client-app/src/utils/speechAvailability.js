@@ -75,6 +75,30 @@ export function buildAvailabilityAnnouncement({
   return `${lot.name}. ${metrics.free} ${metrics.free === 1 ? "cajón libre" : "cajones libres"}${maneuverText}.${bestZoneText}`;
 }
 
+export function buildSaturationAlertAnnouncement({
+  status,
+  targetName = "",
+  alternative = null,
+} = {}) {
+  if (!status || !status.isVisible) {
+    return "";
+  }
+
+  const headline = status.isCritical
+    ? "Estacionamiento lleno"
+    : "Estacionamiento casi lleno";
+  const targetClause = targetName ? ` en ${targetName}` : "";
+  const metricsClause = status.isCritical
+    ? "100 por ciento de ocupación y 0 cajones libres."
+    : `${status.occupancyPercentage} por ciento de ocupación y ${status.freeSpots} ${status.freeSpots === 1 ? "cajón libre" : "cajones libres"}.`;
+
+  const altClause = alternative
+    ? ` Alternativa recomendada: ${alternative.displayName}, con ${alternative.freeSpots} ${alternative.freeSpots === 1 ? "lugar libre" : "lugares libres"}.`
+    : " No hay cajones disponibles en el campus en este momento. Revisa accesos alternos o espera liberación.";
+
+  return `${headline}${targetClause}: ${metricsClause}${altClause}`.trim();
+}
+
 export function buildGuidanceAnnouncement({
   assignment,
   route,
