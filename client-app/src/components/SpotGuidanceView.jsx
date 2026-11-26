@@ -1,17 +1,46 @@
 /**
  * Vista dedicada de guiado paso a paso, temporizador de 15 minutos,
- * ruta animada sobre el croquis SVG y acciones del conductor (Client-App).
+ * croquis arquitectónico con pasillo animado y acciones del conductor (Client-App).
+ * Cumple style-agents.md (cero emojis nativos, SVG consistentes, tabular-nums).
  * Licencia: PolyForm Noncommercial License 1.0.0
  */
 
 import React, { useEffect, useState } from "react";
 import { ParkingGrid } from "./ParkingGrid.jsx";
 import {
+  AlertTriangleIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ArrowUpRightIcon,
+  CarIcon,
+  CheckCircleIcon,
+  CheckIcon,
+  ClockIcon,
+  NavigationIcon,
+  ParkingSquareIcon,
+  RefreshCwIcon,
+  SquareStopIcon,
+  Volume2Icon,
+} from "./Icons.jsx";
+import {
   buildGuidanceAnnouncement,
   isSpeechSupported,
   speakAvailability,
   stopAvailabilitySpeech,
 } from "../utils/speechAvailability.js";
+
+function renderStepIcon(step, turnIsRight) {
+  if (step.id === "gate") {
+    return <CarIcon size={15} />;
+  }
+  if (step.id === "zone") {
+    return <NavigationIcon size={15} />;
+  }
+  if (step.id === "aisle") {
+    return turnIsRight ? <ArrowRightIcon size={15} /> : <ArrowLeftIcon size={15} />;
+  }
+  return <ParkingSquareIcon size={15} />;
+}
 
 export function SpotGuidanceView({
   assignment,
@@ -34,8 +63,6 @@ export function SpotGuidanceView({
   onRequestNew,
   onExploreMap,
   onDismiss,
-  onSimulateShortTimer,
-  onSimulateExternalOccupancy,
 }) {
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -104,15 +131,16 @@ export function SpotGuidanceView({
       >
         <div className="pf-guidance-state-card" data-state="arrived">
           <span className="pf-guidance-state-badge" data-variant="success">
-            ✓ Estacionado
+            <CheckCircleIcon size={14} />
+            <span>Estacionado</span>
           </span>
           <h2 className="pf-guidance-state-title">
             Vehículo en cajón {assignment.slot_name}
           </h2>
           <p className="pf-guidance-state-desc">
-            {assignment.lot_name || assignment.lot_short_name} •{" "}
+            {assignment.lot_name || assignment.lot_short_name} ·{" "}
             {assignment.zone_name} ({assignment.zone_landmark})
-            {arrivedTime ? ` • Confirmado a las ${arrivedTime}` : ""}
+            {arrivedTime ? ` · Confirmado a las ${arrivedTime}` : ""}
           </p>
 
           <div className="pf-guidance-state-actions">
@@ -144,7 +172,8 @@ export function SpotGuidanceView({
       >
         <div className="pf-guidance-state-card" data-state="expired">
           <span className="pf-guidance-state-badge" data-variant="danger">
-            ⏱ Tiempo agotado
+            <ClockIcon size={14} />
+            <span>Tiempo agotado</span>
           </span>
           <h2 className="pf-guidance-state-title">
             Tu reserva de 15 minutos venció
@@ -168,7 +197,10 @@ export function SpotGuidanceView({
               disabled={isRequesting}
               onClick={() => onRequestNew && onRequestNew()}
             >
-              {isRequesting ? "Buscando lugar..." : "🚗 Solicitar nuevo espacio"}
+              <NavigationIcon size={16} />
+              <span>
+                {isRequesting ? "Buscando lugar..." : "Solicitar nuevo espacio"}
+              </span>
             </button>
             <button
               type="button"
@@ -186,10 +218,10 @@ export function SpotGuidanceView({
   const urgencyLabel = isConflict
     ? "Cajón ocupado"
     : urgency === "critical"
-      ? "¡Menos de 1 min!"
+      ? "Menos de 1 min"
       : urgency === "warning"
         ? "Caduca pronto"
-        : "Expira en 15 min";
+        : "Reserva 15 min";
 
   const progressPercent = Math.max(
     0,
@@ -201,7 +233,7 @@ export function SpotGuidanceView({
       className="pf-guidance-shell"
       aria-label={`Guiado hacia el cajón ${assignment.slot_name}`}
     >
-      {/* Tarjeta Hero superpuesta (-32px) con regreso rápido, cajón asignado y cuenta regresiva */}
+      {/* Tarjeta Hero superpuesta (-38px) con regreso rápido, cajón asignado y cuenta regresiva */}
       <article
         className="pf-guidance-hero"
         data-urgency={urgency}
@@ -213,7 +245,8 @@ export function SpotGuidanceView({
             className="pf-back-btn pf-back-btn-compact"
             onClick={() => onExploreMap && onExploreMap()}
           >
-            ← Ver zonas
+            <ArrowLeftIcon size={15} />
+            <span>Ver zonas</span>
           </button>
 
           <span
@@ -222,11 +255,22 @@ export function SpotGuidanceView({
               isConflict ? "conflict" : maneuvering ? "maneuver" : "active"
             }
           >
-            {isConflict
-              ? "⚠ Conflicto en cajón"
-              : maneuvering
-                ? "◐ En maniobra"
-                : "🧭 Guía activa"}
+            {isConflict ? (
+              <>
+                <AlertTriangleIcon size={13} />
+                <span>Conflicto en cajón</span>
+              </>
+            ) : maneuvering ? (
+              <>
+                <span className="pf-dot-inline pf-dot-maneuver" />
+                <span>En maniobra</span>
+              </>
+            ) : (
+              <>
+                <NavigationIcon size={13} />
+                <span>Guía activa</span>
+              </>
+            )}
           </span>
         </div>
 
@@ -247,7 +291,7 @@ export function SpotGuidanceView({
             </div>
 
             <div className="pf-guidance-slot-row">
-              <strong className="pf-guidance-slot-code">
+              <strong className="pf-guidance-slot-code tabular-nums">
                 {assignment.slot_name}
               </strong>
               <div className="pf-guidance-lot-text">
@@ -255,7 +299,7 @@ export function SpotGuidanceView({
                   {assignment.zone_name}
                 </span>
                 <span className="pf-guidance-landmark">
-                  {assignedLot?.shortName || assignment.lot_short_name} •{" "}
+                  {assignedLot?.shortName || assignment.lot_short_name} ·{" "}
                   {assignment.zone_landmark}
                 </span>
               </div>
@@ -267,7 +311,9 @@ export function SpotGuidanceView({
             data-urgency={urgency}
             aria-live="off"
           >
-            <span className="pf-countdown-digits">{formattedTime}</span>
+            <span className="pf-countdown-digits tabular-nums">
+              {formattedTime}
+            </span>
             <span className="pf-countdown-label">{urgencyLabel}</span>
           </div>
         </div>
@@ -290,18 +336,18 @@ export function SpotGuidanceView({
         <div className="pf-guidance-voice-row">
           <button
             type="button"
-            className="pf-voice-btn"
+            className="pf-voice-btn pf-voice-btn-surface"
             data-speaking={String(isSpeaking)}
             onClick={handleToggleVoice}
             aria-pressed={isSpeaking}
           >
-            <span aria-hidden="true">{isSpeaking ? "⏹" : "🔊"}</span>
+            {isSpeaking ? <SquareStopIcon size={14} /> : <Volume2Icon size={15} />}
             <span>{isSpeaking ? "Detener guía" : "Escuchar ruta"}</span>
           </button>
 
           {route && (
-            <span className="pf-guidance-route-chip">
-              {route.blockName} • Fila {route.rowNumber} ({route.turnSymbol})
+            <span className="pf-guidance-route-chip tabular-nums">
+              {route.blockName} · Fila {route.rowNumber} ({route.turnDirection})
             </span>
           )}
         </div>
@@ -321,8 +367,9 @@ export function SpotGuidanceView({
           role="alert"
         >
           <div className="pf-guidance-alert-body">
-            <strong>
-              ⚠ La cámara detectó un vehículo en {assignment.slot_name}
+            <strong className="pf-guidance-alert-title">
+              <AlertTriangleIcon size={15} />
+              <span>La cámara detectó un vehículo en {assignment.slot_name}</span>
             </strong>
             <span>
               Si fuiste tú quien ya se estacionó, confirma tu llegada. Si otro
@@ -336,14 +383,16 @@ export function SpotGuidanceView({
               disabled={isRequesting}
               onClick={() => onReassign && onReassign()}
             >
-              🔄 Reasignar otro lugar
+              <RefreshCwIcon size={14} />
+              <span>Reasignar otro lugar</span>
             </button>
             <button
               type="button"
               className="pf-secondary-btn pf-btn-compact"
               onClick={() => onConfirmArrival && onConfirmArrival()}
             >
-              ✓ Fui yo, ya me estacioné
+              <CheckIcon size={14} />
+              <span>Fui yo, ya me estacioné</span>
             </button>
           </div>
         </div>
@@ -358,8 +407,9 @@ export function SpotGuidanceView({
           aria-live="polite"
         >
           <div className="pf-guidance-alert-body">
-            <strong>
-              ◐ Movimiento detectado en {assignment.slot_name}
+            <strong className="pf-guidance-alert-title">
+              <span className="pf-dot-inline pf-dot-maneuver" />
+              <span>Movimiento detectado en {assignment.slot_name}</span>
             </strong>
             <span>¿Ya estás entrando al cajón asignado?</span>
           </div>
@@ -369,7 +419,8 @@ export function SpotGuidanceView({
               className="pf-secondary-btn pf-btn-compact"
               onClick={() => onConfirmArrival && onConfirmArrival()}
             >
-              ✓ Ya me estacioné
+              <CheckIcon size={14} />
+              <span>Ya me estacioné</span>
             </button>
             <button
               type="button"
@@ -377,7 +428,8 @@ export function SpotGuidanceView({
               disabled={isRequesting}
               onClick={() => onReassign && onReassign()}
             >
-              🔄 Cambiar
+              <RefreshCwIcon size={14} />
+              <span>Cambiar</span>
             </button>
           </div>
         </div>
@@ -397,8 +449,8 @@ export function SpotGuidanceView({
         >
           <div className="pf-route-header">
             <h2 className="pf-map-title">Ruta hacia tu cajón</h2>
-            <span className="pf-route-meta-tag">
-              {route.blockName} • Fila {route.rowNumber}
+            <span className="pf-route-meta-tag tabular-nums">
+              {route.blockName} · Fila {route.rowNumber}
             </span>
           </div>
 
@@ -419,13 +471,13 @@ export function SpotGuidanceView({
                     onClick={() => setActiveStepIndex(index)}
                     aria-current={isCurrent ? "step" : undefined}
                   >
-                    <span className="pf-route-step-num" aria-hidden="true">
-                      {isDone ? "✓" : index + 1}
+                    <span className="pf-route-step-num tabular-nums" aria-hidden="true">
+                      {isDone ? <CheckIcon size={13} /> : index + 1}
                     </span>
                     <span className="pf-route-step-content">
                       <strong className="pf-route-step-title">
-                        <span aria-hidden="true">{step.icon} </span>
-                        {step.title}
+                        {renderStepIcon(step, route.isRightBlock)}
+                        <span>{step.title}</span>
                       </strong>
                       <span className="pf-route-step-desc">
                         {step.description}
@@ -441,7 +493,8 @@ export function SpotGuidanceView({
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        ↗ Google Maps
+                        <ArrowUpRightIcon size={13} />
+                        <span>Google Maps</span>
                       </a>
                       <a
                         className="pf-ext-link"
@@ -449,7 +502,8 @@ export function SpotGuidanceView({
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        ↗ Waze
+                        <ArrowUpRightIcon size={13} />
+                        <span>Waze</span>
                       </a>
                     </div>
                   )}
@@ -460,7 +514,7 @@ export function SpotGuidanceView({
         </article>
       )}
 
-      {/* Croquis SVG con trayectoria animada hacia el cajón asignado */}
+      {/* Croquis arquitectónico con pasillo animado hacia el cajón asignado */}
       {assignedZone?.spots?.length > 0 && (
         <ParkingGrid
           polygons={assignedZone.spots}
@@ -472,6 +526,7 @@ export function SpotGuidanceView({
           assignedPolygonId={assignment.polygon_id}
           showGuidancePath={true}
           assignmentConflict={isConflict}
+          showContextBar={false}
         />
       )}
 
@@ -482,7 +537,8 @@ export function SpotGuidanceView({
           className="pf-primary-btn"
           onClick={() => onConfirmArrival && onConfirmArrival()}
         >
-          ✓ Ya me estacioné
+          <CheckIcon size={17} />
+          <span>Ya me estacioné</span>
         </button>
 
         <div className="pf-guidance-secondary-row">
@@ -492,7 +548,8 @@ export function SpotGuidanceView({
             disabled={isRequesting}
             onClick={() => onReassign && onReassign()}
           >
-            {isRequesting ? "Buscando..." : "🔄 Cambiar cajón"}
+            <RefreshCwIcon size={15} />
+            <span>{isRequesting ? "Buscando..." : "Cambiar cajón"}</span>
           </button>
           <button
             type="button"
@@ -504,36 +561,10 @@ export function SpotGuidanceView({
         </div>
       </div>
 
-      {/* Controles rápidos de demostración cuando no hay WebSocket en vivo */}
       {!connected && (
-        <div
-          className="pf-demo-bar pf-guidance-demo-bar"
-          aria-label="Simuladores de demostración de guía"
-        >
-          <span className="pf-demo-label">
-            <strong>Demo guía</strong> • Pruebas rápidas
-          </span>
-          <div className="pf-guidance-demo-btns">
-            <button
-              type="button"
-              className="pf-demo-btn"
-              onClick={() =>
-                onSimulateExternalOccupancy && onSimulateExternalOccupancy()
-              }
-            >
-              Simular ocupación
-            </button>
-            <button
-              type="button"
-              className="pf-demo-btn"
-              onClick={() =>
-                onSimulateShortTimer && onSimulateShortTimer(10)
-              }
-            >
-              Simular 10s
-            </button>
-          </div>
-        </div>
+        <p className="pf-guidance-demo-hint">
+          Las pruebas de simulación están disponibles en el pill Demo del encabezado.
+        </p>
       )}
     </section>
   );

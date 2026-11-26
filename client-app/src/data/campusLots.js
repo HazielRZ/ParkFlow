@@ -267,6 +267,31 @@ export function applyHighOccupancySimulation(lot) {
   };
 }
 
+export function applyFullOccupancySimulation(lot) {
+  if (!lot) {
+    return lot;
+  }
+  const simulatedZones = (lot.zones || []).map((zone) => {
+    const spots = (zone.spots || []).map((spot) => ({
+      ...spot,
+      state: "Ocupado",
+      vehicle_type: spot.vehicle_type || "car",
+      iou_ratio: 0.86,
+      confidence: 0.96,
+    }));
+    return {
+      ...zone,
+      spots,
+      ...computeZoneCounts(spots),
+    };
+  });
+
+  return {
+    ...lot,
+    zones: simulatedZones,
+  };
+}
+
 export function groupSpotsByZone(flatSpots = [], zoneTemplates = []) {
   const buckets = new Map();
   const templateById = new Map();

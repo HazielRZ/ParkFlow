@@ -7,6 +7,8 @@
 import {
   ASSIGNMENT_TTL_MS,
   computeRemainingMs,
+  findSpotInLots,
+  getEligibleLots,
   selectBestSpotForAssignment,
 } from "../utils/assignmentLogic.js";
 
@@ -139,6 +141,7 @@ export function loadActiveAssignment({ storage, nowMs = Date.now() } = {}) {
 export async function requestParkingSpot({
   lots = [],
   preferredLotId = null,
+  preferredPolygonId = null,
   userRole = "student",
   excludePolygonIds = [],
   ttlMs = ASSIGNMENT_TTL_MS,
@@ -163,6 +166,7 @@ export async function requestParkingSpot({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           preferred_lot_id: preferredLotId,
+          preferred_polygon_id: preferredPolygonId,
           user_role: userRole,
           exclude_polygon_ids: safeExcludes,
           ttl_seconds: Math.round(ttlMs / 1000),
@@ -187,12 +191,39 @@ export async function requestParkingSpot({
     }
   }
 
-  const selection = selectBestSpotForAssignment({
-    lots,
-    preferredLotId,
-    userRole,
-    excludePolygonIds: safeExcludes,
-  });
+  let selection = null;
+
+  if (preferredPolygonId) {
+    const directMatch = findSpotInLots(lots, preferredPolygonId, preferredLotId);
+    const eligibleLotIds = new Set(
+      getEligibleLots(lots, userRole).map((lot) => lot.id)
+    );
+    if (
+      directMatch &&
+      directMatch.spot?.state === "Libre" &&
+      eligibleLotIds.has(directMatch.lot.id)
+    ) {
+      selection = {
+        lot: directMatch.lot,
+        zone: directMatch.zone,
+        spot: directMatch.spot,
+        spotIndex: directMatch.spotIndex,
+        redirectedFromLotId:
+          preferredLotId && directMatch.lot.id !== preferredLotId
+            ? preferredLotId
+            : null,
+      };
+    }
+  }
+
+  if (!selection) {
+    selection = selectBestSpotForAssignment({
+      lots,
+      preferredLotId,
+      userRole,
+      excludePolygonIds: safeExcludes,
+    });
+  }
 
   if (!selection) {
     return {

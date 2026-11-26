@@ -9,14 +9,26 @@ export {
   getNearestGeneralLot,
   getZoneTrafficLight,
   applyHighOccupancySimulation,
+  applyFullOccupancySimulation,
 } from "./data/campusLots.js";
 export {
   buildAvailabilityAnnouncement,
   buildGuidanceAnnouncement,
+  buildSaturationAlertAnnouncement,
   speakAvailability,
   stopAvailabilitySpeech,
   isSpeechSupported,
 } from "./utils/speechAvailability.js";
+export {
+  SATURATION_WARNING_THRESHOLD,
+  SATURATION_CRITICAL_THRESHOLD,
+  SATURATION_MESSAGES,
+  getSaturationStatus,
+  getCampusMetrics,
+  getAlternativeZone,
+  resolveActiveSaturationAlert,
+  shouldTriggerSaturationNotification,
+} from "./utils/saturationLogic.js";
 export {
   ASSIGNMENT_TTL_MS,
   ASSIGNMENT_WARNING_MS,
@@ -44,6 +56,8 @@ export {
   expireParkingAssignment,
 } from "./services/parkingAssignmentService.js";
 export { ZoneSchematicMap } from "./components/ZoneSchematicMap.jsx";
+export { SaturationBanner } from "./components/SaturationBanner.jsx";
+export { DemoBottomSheet } from "./components/DemoBottomSheet.jsx";
 export {
   ParkingGrid,
   ParkingSvgMap,
