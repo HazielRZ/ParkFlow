@@ -1,38 +1,50 @@
 /**
- * Mapa SVG interactivo Nivel 3 (Micro — Croquis detallado de 1 zona con 12–16 cajones).
- * Reutiliza la vista cenital con carril central y soporta Modo Conductor / Modo Técnico.
- * Adaptado al Manual de Identidad Gráfica del TecNM (Pantone 294 C #1B396A).
+ * Mapa arquitectónico Nivel 3 (Micro — Croquis detallado de 1 zona con 12–16 cajones).
+ * Cajones en bloques A y B abiertos hacia el pasillo central (style-agents.md §4.5):
+ * - Bloque A (izq.): border-right: none
+ * - Bloque B (der.): border-left: none
+ * - Sin textos repetitivos "✓ LIBRE" ni "✕ OCUPADO"
+ * - Chevrons animados en el pasillo central hasta la fila del cajón seleccionado/reservado
+ * - Barra flotante contextual sobre la navbar para Reservar / Confirmar / Liberar
  * Licencia: PolyForm Noncommercial License 1.0.0
  */
 
 import React, { useState } from "react";
 import { CAMPUS_ZONES } from "../data/campusLots.js";
+import {
+  AlertTriangleIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  ClockIcon,
+  NavigationIcon,
+  TopDownCarSvg,
+  XIcon,
+} from "./Icons.jsx";
 
 export { CAMPUS_ZONES };
 
 export const STATE_BADGE_COLORS = {
-  Libre: "#16a34a",
-  "En maniobra": "#d97706",
-  Ocupado: "#dc2626",
+  Libre: "var(--free)",
+  "En maniobra": "var(--maneuver)",
+  Ocupado: "var(--occupied)",
 };
 
 export const STATE_CONFIG = {
   Libre: {
-    color: "#16a34a",
-    icon: "✓",
-    shortLabel: "LIBRE",
+    color: "var(--free)",
+    shortLabel: "Libre",
     dashArray: "none",
   },
   "En maniobra": {
-    color: "#d97706",
-    icon: "◐",
-    shortLabel: "MANIOBRA",
+    color: "var(--maneuver)",
+    shortLabel: "Maniobra",
     dashArray: "5 4",
   },
   Ocupado: {
-    color: "#dc2626",
-    icon: "✕",
-    shortLabel: "OCUPADO",
+    color: "var(--occupied)",
+    shortLabel: "Ocupado",
     dashArray: "none",
   },
 };
@@ -45,8 +57,7 @@ export const VEHICLE_LABELS = {
 };
 
 /**
- * Distribuye los cajones en 2 bloques laterales (A a la izquierda, B a la derecha)
- * separados por el carril central vertical.
+ * Conserva la geometría exportada para consumidores externos/pruebas.
  */
 export function computeCentralLaneSlotGeometry(index) {
   const isRightBlock = index % 2 === 1;
@@ -63,56 +74,6 @@ export function computeCentralLaneSlotGeometry(index) {
   return { x, y, width: slotWidth, height: slotHeight, row, isRightBlock };
 }
 
-/**
- * Vista superior cenital de automóvil en gris para cajones ocupados.
- */
-function renderTopDownCarSvg(x, y, width) {
-  const carW = 86;
-  const carH = 34;
-  const cx = x + (width - carW) / 2;
-  const cy = y + 9;
-
-  return (
-    <g aria-hidden="true">
-      {/* Sombra sutil de llantas */}
-      <rect x={cx + 10} y={cy - 3} width="18" height="3" rx="1.5" fill="#4b5563" />
-      <rect x={cx + carW - 28} y={cy - 3} width="18" height="3" rx="1.5" fill="#4b5563" />
-      <rect x={cx + 10} y={cy + carH} width="18" height="3" rx="1.5" fill="#4b5563" />
-      <rect x={cx + carW - 28} y={cy + carH} width="18" height="3" rx="1.5" fill="#4b5563" />
-
-      {/* Carrocería cenital en gris */}
-      <rect
-        x={cx}
-        y={cy}
-        width={carW}
-        height={carH}
-        rx="10"
-        fill="var(--map-car-body)"
-        stroke="var(--map-car-cabin)"
-        strokeWidth="1.5"
-      />
-      {/* Parabrisas y medallón */}
-      <rect
-        x={cx + 15}
-        y={cy + 4}
-        width="56"
-        height="26"
-        rx="6"
-        fill="var(--map-car-window)"
-      />
-      {/* Toldo central */}
-      <rect
-        x={cx + 25}
-        y={cy + 6}
-        width="36"
-        height="22"
-        rx="4"
-        fill="var(--map-car-cabin)"
-      />
-    </g>
-  );
-}
-
 export function ParkingGrid({
   polygons = [],
   stateFilter = "Todos",
@@ -125,6 +86,16 @@ export function ParkingGrid({
   assignedPolygonId = null,
   showGuidancePath = false,
   assignmentConflict = false,
+  assignment = null,
+  effectiveStatus = null,
+  formattedTime = "15:00",
+  isStaffRestricted = false,
+  isRequesting = false,
+  showContextBar = true,
+  onReserveSlot,
+  onConfirmArrival,
+  onReleaseAssignment,
+  onOpenGuidance,
 }) {
   const [internalSelectedId, setInternalSelectedId] = useState(null);
   const activeSelectedId =
@@ -158,428 +129,248 @@ export function ParkingGrid({
   const assignedIndex = assignedPolygonId
     ? polygons.findIndex((item) => item.polygon_id === assignedPolygonId)
     : -1;
-  const assignedGeom =
-    assignedIndex >= 0 ? computeCentralLaneSlotGeometry(assignedIndex) : null;
+  const selectedIndex = activeSelectedId
+    ? polygons.findIndex((item) => item.polygon_id === activeSelectedId)
+    : -1;
+
+  // Prioridad de guiado en el pasillo: cajón seleccionado en el croquis, o cajón reservado en esta zona
+  const activeFocusIndex =
+    selectedIndex >= 0 ? selectedIndex : assignedIndex >= 0 ? assignedIndex : -1;
+  const targetRow = activeFocusIndex >= 0 ? Math.floor(activeFocusIndex / 2) : -1;
+  const targetIsRightBlock = activeFocusIndex >= 0 ? activeFocusIndex % 2 === 1 : false;
 
   const rowsCount = Math.max(1, Math.ceil(polygons.length / 2));
-  const svgHeight = Math.max(320, 54 + rowsCount * 82 + 28);
+  const rows = Array.from({ length: rowsCount }, (_, rowIdx) => ({
+    rowIdx,
+    leftSlot: polygons[rowIdx * 2] || null,
+    rightSlot: polygons[rowIdx * 2 + 1] || null,
+  }));
 
-  const arrowPositions = Array.from(
-    { length: rowsCount },
-    (_, idx) => 88 + idx * 82
-  ).filter((y) => y < svgHeight - 40);
+  const hasAssignedInZone = assignedIndex >= 0;
+  const assignedSlotInZone = hasAssignedInZone ? polygons[assignedIndex] : null;
+  const isSelectingAssigned = Boolean(
+    explicitSlot && assignedPolygonId && explicitSlot.polygon_id === assignedPolygonId
+  );
+
+  // Barra contextual sobre la navbar cuando hay selección o reserva activa en esta zona
+  const shouldShowContextBar =
+    showContextBar &&
+    (Boolean(explicitSlot) ||
+      (hasAssignedInZone &&
+        assignment &&
+        (effectiveStatus === "active" ||
+          effectiveStatus === "conflict" ||
+          effectiveStatus === "arrived")));
+
+  const renderBay = (slot, isRightBlock, rowIdx) => {
+    if (!slot) {
+      return <div className="pf-bay-placeholder" aria-hidden="true" />;
+    }
+
+    const isAssigned = Boolean(
+      assignedPolygonId && slot.polygon_id === assignedPolygonId
+    );
+    const isAssignedConflict = isAssigned && assignmentConflict;
+    const isSelected = activeSelectedId === slot.polygon_id;
+    const matchesFilter =
+      stateFilter === "Todos" || slot.state === stateFilter || isAssigned;
+
+    const bayVisualState = isAssignedConflict
+      ? "conflict"
+      : isAssigned
+        ? "assigned"
+        : slot.state === "Ocupado"
+          ? "occupied"
+          : slot.state === "En maniobra"
+            ? "maneuver"
+            : "free";
+
+    const ariaDetail = technicalMode
+      ? `, confianza ${Math.round((slot.confidence || 0) * 100)} por ciento`
+      : "";
+    const ariaAssigned = isAssigned ? ", tu cajón asignado" : "";
+
+    return (
+      <button
+        key={slot.polygon_id}
+        type="button"
+        className="pf-bay"
+        data-block={isRightBlock ? "B" : "A"}
+        data-state={bayVisualState}
+        data-selected={String(isSelected)}
+        data-assigned={isAssigned ? "true" : undefined}
+        data-dimmed={String(!matchesFilter)}
+        data-polygon-id={slot.polygon_id}
+        aria-label={`Cajón ${slot.slot_name}, Bloque ${isRightBlock ? "B" : "A"} fila ${rowIdx + 1}, estado ${slot.state}${ariaAssigned}${ariaDetail}`}
+        aria-pressed={isSelected}
+        onClick={() => handleSelect(slot)}
+      >
+        {isAssigned && !isAssignedConflict ? (
+          <div className="pf-bay-assigned-content">
+            <span className="pf-bay-code tabular-nums">{slot.slot_name}</span>
+            <span className="pf-bay-assigned-tag">
+              <NavigationIcon size={10} />
+              <span>
+                {effectiveStatus === "arrived"
+                  ? "Estacionado"
+                  : slot.state === "En maniobra"
+                    ? "Tu lugar · Maniobra"
+                    : "Tu lugar"}
+              </span>
+            </span>
+          </div>
+        ) : isAssignedConflict ? (
+          <div className="pf-bay-assigned-content">
+            {slot.state === "Ocupado" && (
+              <TopDownCarSvg facing={isRightBlock ? "left" : "right"} />
+            )}
+            <span className="pf-bay-code-corner tabular-nums">
+              {slot.slot_name}
+            </span>
+            <span className="pf-bay-conflict-tag">
+              <AlertTriangleIcon size={10} />
+              <span>Conflicto</span>
+            </span>
+          </div>
+        ) : slot.state === "Ocupado" ? (
+          <div className="pf-bay-occupied-content">
+            <TopDownCarSvg facing={isRightBlock ? "left" : "right"} />
+            <span className="pf-bay-code-corner tabular-nums">
+              {slot.slot_name}
+            </span>
+          </div>
+        ) : slot.state === "En maniobra" ? (
+          <div className="pf-bay-maneuver-content">
+            <span className="pf-bay-code tabular-nums">{slot.slot_name}</span>
+            <span className="pf-bay-maneuver-badge">
+              <span className="pf-legend-dot pf-dot-maneuver" />
+              <span>
+                {technicalMode
+                  ? `Maniobra ${Math.round((slot.iou_ratio || 0) * 100)}%`
+                  : "Maniobra"}
+              </span>
+            </span>
+          </div>
+        ) : (
+          <span className="pf-bay-code pf-bay-code-free tabular-nums">
+            {slot.slot_name}
+          </span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <section
-      className="pf-map-card"
-      aria-label="Mapa de Cajones de Estacionamiento"
+      className="pf-croquis-card"
+      aria-label="Croquis de cajones de estacionamiento"
     >
       <div className="pf-map-header">
-        <div>
+        <div className="pf-map-title-wrap">
           <h2 className="pf-map-title">{zoneName}</h2>
         </div>
+
+        {/* Leyenda simplificada: solo punto 6px + etiqueta */}
         <div className="pf-legend" aria-label="Leyenda de estados">
           <span className="pf-legend-item">
             <span
-              className="pf-legend-swatch"
-              style={{ backgroundColor: STATE_BADGE_COLORS.Libre }}
+              className="pf-legend-dot"
+              style={{ backgroundColor: "var(--free)" }}
             />
-            ✓ Libre
+            <span>Libre</span>
           </span>
           <span className="pf-legend-item">
             <span
-              className="pf-legend-swatch"
-              style={{ backgroundColor: STATE_BADGE_COLORS["En maniobra"] }}
+              className="pf-legend-dot"
+              style={{ backgroundColor: "var(--maneuver)" }}
             />
-            ◐ Maniobra
+            <span>Maniobra</span>
           </span>
           <span className="pf-legend-item">
             <span
-              className="pf-legend-swatch"
-              style={{ backgroundColor: STATE_BADGE_COLORS.Ocupado }}
+              className="pf-legend-dot"
+              style={{ backgroundColor: "var(--occupied)" }}
             />
-            ✕ Ocupado
+            <span>Ocupado</span>
           </span>
         </div>
       </div>
 
-      <div className="pf-svg-wrapper">
-        <svg
-          className="pf-svg-canvas"
-          viewBox={`0 0 540 ${svgHeight}`}
-          role="img"
-          aria-label={`Croquis interactivo de ${zoneName}`}
-        >
-          {/* Lienzo base del estacionamiento */}
-          <rect
-            x="6"
-            y="6"
-            width="528"
-            height={svgHeight - 12}
-            rx="16"
-            fill="var(--map-canvas-bg)"
-            stroke="var(--border-subtle)"
-            strokeWidth="1.5"
-          />
+      {/* Tablero arquitectónico del croquis (border-radius 24px) */}
+      <div
+        className="pf-croquis-board"
+        role="region"
+        aria-label={`Croquis interactivo de ${zoneName}`}
+      >
+        <div className="pf-croquis-col-headers" aria-hidden="true">
+          <span className="pf-croquis-block-label">Bloque A</span>
+          <span className="pf-croquis-lane-label">{laneLabel}</span>
+          <span className="pf-croquis-block-label">Bloque B</span>
+        </div>
 
-          {/* Encabezados de Bloques A y B */}
-          <text
-            x="112"
-            y="34"
-            textAnchor="middle"
-            fill="var(--text-muted)"
-            fontSize="12"
-            fontWeight="700"
-          >
-            BLOQUE A
-          </text>
-          <text
-            x="428"
-            y="34"
-            textAnchor="middle"
-            fill="var(--text-muted)"
-            fontSize="12"
-            fontWeight="700"
-          >
-            BLOQUE B
-          </text>
+        <div className="pf-croquis-grid-body">
+          {/* Carril central continuo de fondo */}
+          <div className="pf-croquis-lane-backdrop" aria-hidden="true">
+            <span className="pf-croquis-lane-line" />
+          </div>
 
-          {/* Carril central de entrada con flechas punteadas dinámicas */}
-          <rect
-            x="212"
-            y="16"
-            width="116"
-            height={svgHeight - 32}
-            rx="10"
-            fill="var(--map-lane-bg)"
-          />
-          <text
-            x="270"
-            y="35"
-            textAnchor="middle"
-            fill="var(--accent-text)"
-            fontSize="9.5"
-            fontWeight="700"
-          >
-            {laneLabel}
-          </text>
-          <line
-            x1="270"
-            y1="48"
-            x2="270"
-            y2={svgHeight - 34}
-            stroke="var(--text-muted)"
-            strokeWidth="2"
-            strokeDasharray="6 6"
-          />
-          {arrowPositions.map((arrowY) => (
-            <path
-              key={arrowY}
-              d={`M264 ${arrowY} L270 ${arrowY + 10} L276 ${arrowY}`}
-              fill="none"
-              stroke="var(--text-muted)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          ))}
-
-          {/* Cajones organizados en bloques laterales */}
-          {polygons.map((slot, index) => {
-            const geom = computeCentralLaneSlotGeometry(index);
-            const cfg = STATE_CONFIG[slot.state] || STATE_CONFIG.Libre;
-            const isAssigned = Boolean(
-              assignedPolygonId && slot.polygon_id === assignedPolygonId
-            );
-            const isAssignedConflict = isAssigned && assignmentConflict;
-            const matchesFilter =
-              stateFilter === "Todos" || slot.state === stateFilter || isAssigned;
-            const isSelected = activeSelectedId === slot.polygon_id;
-
-            const slotFill = isAssignedConflict
-              ? "var(--status-danger-bg)"
-              : isAssigned
-                ? "var(--guidance-spot-bg)"
-                : isSelected
-                  ? "var(--accent-soft)"
-                  : "var(--map-slot-bg)";
-            const slotStroke = isAssignedConflict
-              ? "var(--status-danger)"
-              : isAssigned
-                ? "var(--guidance-spot-border)"
-                : isSelected
-                  ? "var(--accent-border)"
-                  : slot.state === "En maniobra"
-                    ? "#d97706"
-                    : "var(--border-subtle)";
-            const slotStrokeWidth =
-              isAssigned || isSelected ? "2.5" : "1.5";
-            const ariaDetail = technicalMode
-              ? `, confianza ${Math.round((slot.confidence || 0) * 100)} por ciento`
-              : "";
-            const ariaAssigned = isAssigned ? ", tu cajón asignado" : "";
+          {rows.map(({ rowIdx, leftSlot, rightSlot }) => {
+            const isGuidedRow = targetRow >= 0 && rowIdx <= targetRow;
+            const isDestinationRow = targetRow >= 0 && rowIdx === targetRow;
+            const chevronGuided =
+              isGuidedRow && (selectedIndex >= 0 || showGuidancePath || hasAssignedInZone);
+            const isConflictPath =
+              assignmentConflict &&
+              hasAssignedInZone &&
+              selectedIndex < 0;
 
             return (
-              <g
-                key={slot.polygon_id}
-                className="pf-slot-group"
-                role="button"
-                tabIndex={0}
-                aria-label={`Cajón ${slot.slot_name}, estado ${slot.state}${ariaAssigned}${ariaDetail}`}
-                aria-pressed={isSelected}
-                data-slot-state={slot.state}
-                data-assigned={isAssigned ? "true" : undefined}
-                data-polygon-id={slot.polygon_id}
-                style={{ opacity: matchesFilter ? 1 : 0.22 }}
-                onClick={() => handleSelect(slot)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleSelect(slot);
-                  }
-                }}
-              >
-                <rect
-                  x={geom.x}
-                  y={geom.y}
-                  width={geom.width}
-                  height={geom.height}
-                  rx="10"
-                  fill={slotFill}
-                  stroke={slotStroke}
-                  strokeWidth={slotStrokeWidth}
-                  strokeDasharray={
-                    isAssignedConflict
-                      ? "6 4"
-                      : isAssigned || isSelected
-                        ? "none"
-                        : cfg.dashArray
-                  }
-                />
+              <div key={rowIdx} className="pf-croquis-row">
+                <div className="pf-croquis-cell pf-croquis-cell-left">
+                  {renderBay(leftSlot, false, rowIdx)}
+                </div>
 
-                {isAssigned && !isAssignedConflict ? (
-                  <>
-                    <text
-                      x={geom.x + geom.width / 2}
-                      y={geom.y + 32}
-                      textAnchor="middle"
-                      fill="var(--accent-text)"
-                      fontSize="19"
-                      fontWeight="800"
+                <div
+                  className="pf-croquis-lane-cell"
+                  data-guided={String(chevronGuided)}
+                  data-destination={String(isDestinationRow)}
+                  data-conflict={String(Boolean(isConflictPath))}
+                  aria-hidden="true"
+                >
+                  {isDestinationRow ? (
+                    <span
+                      className="pf-lane-turn-indicator"
+                      data-direction={targetIsRightBlock ? "right" : "left"}
+                      data-conflict={String(Boolean(isConflictPath))}
                     >
-                      {slot.slot_name}
-                    </text>
-                    <text
-                      x={geom.x + geom.width / 2}
-                      y={geom.y + 52}
-                      textAnchor="middle"
-                      fill="var(--guidance-route)"
-                      fontSize="10.5"
-                      fontWeight="800"
+                      {targetIsRightBlock ? (
+                        <ArrowRightIcon size={16} strokeWidth={2.3} />
+                      ) : (
+                        <ArrowLeftIcon size={16} strokeWidth={2.3} />
+                      )}
+                    </span>
+                  ) : (
+                    <span
+                      className="pf-lane-chevron"
+                      style={
+                        chevronGuided
+                          ? { animationDelay: `${rowIdx * 110}ms` }
+                          : undefined
+                      }
                     >
-                      {slot.state === "En maniobra"
-                        ? "★ TU LUGAR • MANIOBRA"
-                        : "★ TU LUGAR"}
-                    </text>
-                  </>
-                ) : isAssignedConflict && slot.state !== "Ocupado" ? (
-                  <>
-                    <text
-                      x={geom.x + geom.width / 2}
-                      y={geom.y + 32}
-                      textAnchor="middle"
-                      fill="var(--text-primary)"
-                      fontSize="18"
-                      fontWeight="800"
-                    >
-                      {slot.slot_name}
-                    </text>
-                    <text
-                      x={geom.x + geom.width / 2}
-                      y={geom.y + 52}
-                      textAnchor="middle"
-                      fill="var(--status-danger)"
-                      fontSize="10.5"
-                      fontWeight="800"
-                    >
-                      ⚠ CONFLICTO
-                    </text>
-                  </>
-                ) : slot.state === "Ocupado" ? (
-                  <>
-                    {renderTopDownCarSvg(geom.x, geom.y, geom.width)}
-                    <text
-                      x={geom.x + 12}
-                      y={geom.y + geom.height - 7}
-                      fill="var(--text-muted)"
-                      fontSize="10"
-                      fontWeight="700"
-                    >
-                      {slot.slot_name}
-                    </text>
-                    <text
-                      x={geom.x + geom.width - 12}
-                      y={geom.y + geom.height - 7}
-                      textAnchor="end"
-                      fill="var(--status-danger)"
-                      fontSize="10"
-                      fontWeight="700"
-                    >
-                      {isAssignedConflict ? "⚠ OCUPADO" : "✕ OCUPADO"}
-                    </text>
-                  </>
-                ) : slot.state === "En maniobra" ? (
-                  <>
-                    <text
-                      x={geom.x + geom.width / 2}
-                      y={geom.y + 30}
-                      textAnchor="middle"
-                      fill="var(--text-primary)"
-                      fontSize="16"
-                      fontWeight="800"
-                    >
-                      {slot.slot_name}
-                    </text>
-                    <text
-                      x={geom.x + geom.width / 2}
-                      y={geom.y + 50}
-                      textAnchor="middle"
-                      fill="var(--status-warning)"
-                      fontSize="11"
-                      fontWeight="700"
-                    >
-                      {technicalMode
-                        ? `◐ MANIOBRA (${Math.round((slot.iou_ratio || 0) * 100)}%)`
-                        : "◐ EN MANIOBRA"}
-                    </text>
-                  </>
-                ) : (
-                  <>
-                    <text
-                      x={geom.x + geom.width / 2}
-                      y={geom.y + 34}
-                      textAnchor="middle"
-                      fill="var(--accent-text)"
-                      fontSize="19"
-                      fontWeight="800"
-                    >
-                      {slot.slot_name}
-                    </text>
-                    <text
-                      x={geom.x + geom.width / 2}
-                      y={geom.y + 52}
-                      textAnchor="middle"
-                      fill="var(--status-success)"
-                      fontSize="11"
-                      fontWeight="700"
-                    >
-                      ✓ LIBRE
-                    </text>
-                  </>
-                )}
-              </g>
+                      <ChevronDownIcon size={16} strokeWidth={2.2} />
+                    </span>
+                  )}
+                </div>
+
+                <div className="pf-croquis-cell pf-croquis-cell-right">
+                  {renderBay(rightSlot, true, rowIdx)}
+                </div>
+              </div>
             );
           })}
-
-          {/* Trayectoria animada desde la entrada del carril hasta el cajón asignado */}
-          {showGuidancePath && assignedGeom && (() => {
-            const laneX = 270;
-            const centerY = assignedGeom.y + assignedGeom.height / 2;
-            const curveRadius = 22;
-            const turnStartY = Math.max(54, centerY - curveRadius);
-            const endX = assignedGeom.isRightBlock
-              ? assignedGeom.x - 4
-              : assignedGeom.x + assignedGeom.width + 4;
-            const curveEndX = assignedGeom.isRightBlock
-              ? laneX + curveRadius
-              : laneX - curveRadius;
-            const pathD = `M ${laneX} 46 L ${laneX} ${turnStartY} Q ${laneX} ${centerY} ${curveEndX} ${centerY} L ${endX} ${centerY}`;
-            const arrowD = assignedGeom.isRightBlock
-              ? `M ${endX - 9} ${centerY - 6} L ${endX} ${centerY} L ${endX - 9} ${centerY + 6}`
-              : `M ${endX + 9} ${centerY - 6} L ${endX} ${centerY} L ${endX + 9} ${centerY + 6}`;
-            const beaconX = assignedGeom.isRightBlock
-              ? assignedGeom.x + 14
-              : assignedGeom.x + assignedGeom.width - 14;
-            const beaconY = assignedGeom.y + 14;
-            const routeStroke = assignmentConflict
-              ? "var(--status-danger)"
-              : "var(--guidance-route)";
-
-            return (
-              <g className="pf-guidance-overlay" aria-hidden="true">
-                <path
-                  d={pathD}
-                  className="pf-guidance-route-glow"
-                  fill="none"
-                  stroke={assignmentConflict ? "var(--status-danger-bg)" : "var(--guidance-route-glow)"}
-                  strokeWidth="12"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d={pathD}
-                  className="pf-guidance-route-path"
-                  fill="none"
-                  stroke={routeStroke}
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeDasharray="10 7"
-                />
-                <circle cx={laneX} cy={46} r="5" fill={routeStroke} />
-                <path
-                  d={arrowD}
-                  fill="none"
-                  stroke={routeStroke}
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                {!assignmentConflict && (
-                  <circle
-                    cx={beaconX}
-                    cy={beaconY}
-                    r="5"
-                    className="pf-spot-beacon"
-                    fill={routeStroke}
-                  />
-                )}
-              </g>
-            );
-          })()}
-        </svg>
-      </div>
-
-      {/* Vista Conductor: pill mínima sin telemetría técnica */}
-      {!technicalMode && explicitSlot && (
-        <div
-          className="pf-driver-slot-chip"
-          role="status"
-          aria-live="polite"
-        >
-          <span className="pf-driver-slot-info">
-            <span
-              className="pf-state-pill"
-              style={{
-                backgroundColor:
-                  STATE_BADGE_COLORS[explicitSlot.state] || "#64748b",
-              }}
-            >
-              {(STATE_CONFIG[explicitSlot.state] || {}).icon || "•"}{" "}
-              {explicitSlot.state}
-            </span>
-            <strong>Cajón {explicitSlot.slot_name}</strong>
-          </span>
-          <button
-            type="button"
-            className="pf-chip-close"
-            onClick={handleClearSelection}
-            aria-label="Cerrar selección de cajón"
-          >
-            ✕
-          </button>
         </div>
-      )}
+      </div>
 
       {/* Vista Técnica / Admin: telemetría completa de YOLO + IoU */}
       {technicalMode && technicalSlot && (
@@ -594,31 +385,32 @@ export function ParkingGrid({
             <div>
               <h3 className="pf-detail-title">
                 Cajón {technicalSlot.slot_name}{" "}
-                <small style={{ fontWeight: 500, color: "var(--text-muted)" }}>
+                <small className="pf-detail-id">
                   ({technicalSlot.polygon_id})
                 </small>
               </h3>
               {cameraId && (
-                <small style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                  Cámara: {cameraId}
-                </small>
+                <small className="pf-detail-cam">Cámara: {cameraId}</small>
               )}
             </div>
             <span
               className="pf-state-pill"
-              style={{
-                backgroundColor:
-                  STATE_BADGE_COLORS[technicalSlot.state] || "#64748b",
-              }}
+              data-state={technicalSlot.state}
             >
-              {(STATE_CONFIG[technicalSlot.state] || {}).icon || "•"}{" "}
-              {technicalSlot.state}
+              <span
+                className="pf-legend-dot"
+                style={{
+                  backgroundColor:
+                    STATE_BADGE_COLORS[technicalSlot.state] || "var(--text-muted)",
+                }}
+              />
+              <span>{technicalSlot.state}</span>
             </span>
           </div>
 
           <div className="pf-detail-grid">
             <div className="pf-detail-item">
-              <strong>Tipo de vehículo</strong>
+              <strong>Vehículo</strong>
               <span>
                 {technicalSlot.vehicle_type
                   ? VEHICLE_LABELS[technicalSlot.vehicle_type] ||
@@ -627,19 +419,166 @@ export function ParkingGrid({
               </span>
             </div>
             <div className="pf-detail-item">
-              <strong>Estado reportado</strong>
+              <strong>Estado</strong>
               <span>{technicalSlot.state}</span>
             </div>
             <div className="pf-detail-item">
               <strong>Intersección (IoU)</strong>
-              <span>{((technicalSlot.iou_ratio || 0) * 100).toFixed(1)}%</span>
+              <span className="tabular-nums">
+                {((technicalSlot.iou_ratio || 0) * 100).toFixed(1)}%
+              </span>
             </div>
             <div className="pf-detail-item">
               <strong>Confianza YOLO</strong>
-              <span>{((technicalSlot.confidence || 0) * 100).toFixed(1)}%</span>
+              <span className="tabular-nums">
+                {((technicalSlot.confidence || 0) * 100).toFixed(1)}%
+              </span>
             </div>
           </div>
         </article>
+      )}
+
+      {/* Barra flotante contextual sobre la navbar (Reservar / Confirmar / Liberar) */}
+      {shouldShowContextBar && (
+        <div
+          className="pf-context-bar-wrapper"
+          role="region"
+          aria-live="polite"
+          aria-label="Acción rápida sobre cajón"
+        >
+          <div
+            key={
+              isSelectingAssigned || (!explicitSlot && hasAssignedInZone)
+                ? "reserved"
+                : `selected-${explicitSlot?.polygon_id || "none"}`
+            }
+            className="pf-context-bar"
+            data-mode={
+              isSelectingAssigned || (!explicitSlot && hasAssignedInZone)
+                ? "reserved"
+                : "selected"
+            }
+          >
+            {(isSelectingAssigned || (!explicitSlot && hasAssignedInZone)) &&
+            assignment ? (
+              <>
+                <div className="pf-context-info">
+                  <span className="pf-context-eyebrow">
+                    {effectiveStatus === "conflict" ? (
+                      <>
+                        <AlertTriangleIcon size={12} />
+                        <span>Conflicto en {assignment.slot_name}</span>
+                      </>
+                    ) : effectiveStatus === "arrived" ? (
+                      <>
+                        <CheckIcon size={12} />
+                        <span>Estacionado · {assignment.slot_name}</span>
+                      </>
+                    ) : (
+                      <>
+                        <ClockIcon size={12} />
+                        <span className="tabular-nums">
+                          {assignment.slot_name} · {formattedTime}
+                        </span>
+                      </>
+                    )}
+                  </span>
+                  <span className="pf-context-sub">
+                    {assignment.zone_name}
+                  </span>
+                </div>
+
+                <div className="pf-context-actions">
+                  {effectiveStatus !== "arrived" && onConfirmArrival && (
+                    <button
+                      type="button"
+                      className="pf-context-btn pf-context-btn-primary"
+                      onClick={() => onConfirmArrival()}
+                    >
+                      <CheckIcon size={14} />
+                      <span>Confirmar</span>
+                    </button>
+                  )}
+                  {onReleaseAssignment && (
+                    <button
+                      type="button"
+                      className="pf-context-btn pf-context-btn-ghost"
+                      onClick={() => {
+                        onReleaseAssignment();
+                        handleClearSelection();
+                      }}
+                    >
+                      <span>Liberar</span>
+                    </button>
+                  )}
+                  {onOpenGuidance && (
+                    <button
+                      type="button"
+                      className="pf-context-icon-btn"
+                      onClick={() => onOpenGuidance()}
+                      aria-label="Abrir vista de guía"
+                      title="Abrir vista de guía"
+                    >
+                      <NavigationIcon size={15} />
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : explicitSlot ? (
+              <>
+                <div className="pf-context-info">
+                  <span className="pf-context-eyebrow">
+                    <span
+                      className="pf-legend-dot"
+                      style={{
+                        backgroundColor:
+                          STATE_BADGE_COLORS[explicitSlot.state] ||
+                          "var(--text-muted)",
+                      }}
+                    />
+                    <span>
+                      {explicitSlot.state} · Bloque{" "}
+                      {selectedIndex % 2 === 1 ? "B" : "A"} · Fila{" "}
+                      {Math.floor(Math.max(0, selectedIndex) / 2) + 1}
+                    </span>
+                  </span>
+                  <strong className="pf-context-title tabular-nums">
+                    Cajón {explicitSlot.slot_name}
+                  </strong>
+                </div>
+
+                <div className="pf-context-actions">
+                  {explicitSlot.state === "Libre" && onReserveSlot && (
+                    <button
+                      type="button"
+                      className="pf-context-btn pf-context-btn-primary"
+                      disabled={isStaffRestricted || isRequesting}
+                      onClick={() => onReserveSlot(explicitSlot)}
+                    >
+                      <NavigationIcon size={14} />
+                      <span>
+                        {isRequesting
+                          ? "Reservando..."
+                          : isStaffRestricted
+                            ? "Solo personal"
+                            : "Reservar (15 min)"}
+                      </span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    className="pf-context-icon-btn"
+                    onClick={handleClearSelection}
+                    aria-label="Cerrar selección de cajón"
+                  >
+                    <XIcon size={15} />
+                  </button>
+                </div>
+              </>
+            ) : null}
+          </div>
+        </div>
       )}
     </section>
   );

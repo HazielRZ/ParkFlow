@@ -160,13 +160,18 @@ export function useParkingAssignment({ lots = [], connected = false } = {}) {
   }, [assignment, spotMatch]);
 
   const requestSpot = useCallback(
-    async ({ preferredLotId = null, userRole = "student" } = {}) => {
+    async ({
+      preferredLotId = null,
+      preferredPolygonId = null,
+      userRole = "student",
+    } = {}) => {
       setIsRequesting(true);
       setAssignmentError("");
       try {
         const result = await requestParkingSpot({
           lots: effectiveLots,
           preferredLotId,
+          preferredPolygonId,
           userRole,
         });
         if (!result.ok) {
