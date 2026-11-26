@@ -29,7 +29,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 COPY src/ ./src/
+COPY config/ ./config/
 
 USER nobody
 
-CMD ["python", "-m", "src.client.http_dispatcher"]
+CMD ["python", "-m", "src.client.async_publisher"]

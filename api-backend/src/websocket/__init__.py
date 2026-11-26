@@ -1,5 +1,5 @@
-"""Gateway WebSocket para difusión en tiempo real hacia `/client-app`."""
+"""Gateway WebSocket para difusión en tiempo real hacia `/client-app` y paneles LED."""
 
-from .gateway import WebSocketBroadcastGateway
+from .gateway import ConnectionManager, WebSocketBroadcastGateway
 
-__all__ = ["WebSocketBroadcastGateway"]
+__all__ = ["ConnectionManager", "WebSocketBroadcastGateway"]

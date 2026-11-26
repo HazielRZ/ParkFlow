@@ -9,14 +9,19 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.access_routes import build_access_router
+from src.api.aforo_routes import build_aforo_router
 from src.api.auth_routes import build_auth_router
 from src.api.calibration_routes import build_calibration_router
 from src.api.inference_routes import build_inference_router
+from src.api.analytics_routes import build_analytics_router
+from src.services.analytics_service import AnalyticsService
+from src.models.campus import campus_configurados
+from src.services.aforo_service import AforoService
 from src.services.audit_service import auditoria_service
 from src.services.calibracion_service import CalibracionService
 from src.services.parking_state_service import ParkingStateService
 from src.validators.schema_validator import InferenceSchemaValidator
-from src.websocket.gateway import WebSocketBroadcastGateway
+from src.websocket.gateway import ConnectionManager
 
 
 def create_app(schema_path: Optional[Path] = None) -> FastAPI:
@@ -25,8 +30,9 @@ def create_app(schema_path: Optional[Path] = None) -> FastAPI:
         title="ParkFlow CV to Backend Ingestion API",
         version="1.0.0",
         description=(
-            "Orquestador de negocio, validación de estados de estacionamiento y "
-            "autenticación institucional con RBAC (RNF-05 / INT-SW-01 / RNF-02)."
+            "Orquestador de negocio, validación de estados de estacionamiento, "
+            "autenticación institucional con RBAC y difusión de aforo en tiempo real "
+            "(RNF-05 / INT-SW-01 / RNF-02 / INT-COM-01 / RNF-01)."
         ),
         license_info={
             "name": "PolyForm Noncommercial License 1.0.0",
@@ -43,12 +49,16 @@ def create_app(schema_path: Optional[Path] = None) -> FastAPI:
     )
 
     validator = InferenceSchemaValidator(schema_path=schema_path)
-    ws_gateway = WebSocketBroadcastGateway()
+    campus = campus_configurados()
+    ws_gateway = ConnectionManager(campus_conocidos=campus)
     state_service = ParkingStateService(ws_gateway=ws_gateway, auditoria=auditoria_service)
     calibracion_service = CalibracionService()
+    aforo_service = AforoService(state_service=state_service, campus_conocidos=campus)
+    analytics_service = AnalyticsService(state_service=state_service)
     # Expuestos para inspección en pruebas de integración.
     app.state.parking_state_service = state_service
     app.state.calibracion_service = calibracion_service
+    app.state.connection_manager = ws_gateway
 
     app.include_router(
         build_inference_router(validator=validator, state_service=state_service)
@@ -60,6 +70,8 @@ def create_app(schema_path: Optional[Path] = None) -> FastAPI:
         )
     )
     app.include_router(build_access_router(state_service=state_service))
+    app.include_router(build_aforo_router(aforo_service=aforo_service, manager=ws_gateway))
+    app.include_router(build_analytics_router(analytics_service=analytics_service))
 
     @app.get("/health", tags=["System"])
     async def health_check() -> dict[str, str]:

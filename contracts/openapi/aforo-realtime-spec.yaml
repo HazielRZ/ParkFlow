@@ -1,0 +1,198 @@
+openapi: 3.0.3
+info:
+  title: ParkFlow — Aforo en tiempo real (snapshot REST y WebSocket)
+  version: 1.0.0
+  description: |
+    Contrato entre `/api-backend` y sus consumidores en tiempo real (PWA móvil y paneles LED).
+    Trazabilidad ERS: INT-COM-01 (WebSockets/REST con latencia < 3 s) y RNF-01 (respuesta ≤ 3 s).
+
+    **Lectura pública.** Es disponibilidad de cajones, no gestión: RNF-02 exige login solo
+    para gestión, y los paneles LED no pueden iniciar sesión.
+
+    **Campus y zona.** Una zona es el `parking_lot_id` del contrato INT-SW-01 (igual que
+    `Zone.code` en la base de datos) y su código empieza con el del campus:
+    `ITM-CAMPUS1-EST-NORTE` pertenece a `ITM-CAMPUS1`.
+
+    ## Canales WebSocket
+
+    | Canal | Recibe |
+    | :--- | :--- |
+    | `ws://<host>:8000/ws/parking-states` | Todos los eventos (canal global, el que ya usa la PWA) |
+    | `ws://<host>:8000/ws/campus/{campus_id}` | Eventos de todas las zonas de ese campus |
+    | `ws://<host>:8000/ws/campus/{campus_id}/zonas/{zona_id}` | Eventos de una sola zona |
+
+    Un campus inexistente, o una zona que no pertenece al campus, se rechaza al conectar
+    con el código de cierre `1008`. Los mensajes del cliente se ignoran (sirven como ping).
+
+    Cada evento se envía en paralelo y con tiempo límite por cliente. Si un cliente no lo
+    recibe a tiempo, se cierra su conexión con el código `1013` (Try Again Later) para que
+    se reconecte; así un cliente lento no retrasa a los demás.
+
+    Eventos que se difunden (formato JSON, cada uno con `parking_lot_id`):
+    - `parking_state_updated`: `{event, parking_lot_id, timestamp, frame_sequence, polygons[], metrics}`.
+      `polygons[]` tiene los mismos campos que `PolygonSnapshot` (sin `updated_at`).
+    - `barrier_pulse_updated`: `{event, parking_lot_id, barrier_id, pulse, timestamp, metrics}`.
+
+    ## Orden recomendado para el cliente
+
+    1. Abrir el WebSocket del campus o de la zona.
+    2. Pedir el snapshot REST correspondiente y pintar la pantalla.
+    3. Aplicar los eventos que lleguen por el WebSocket.
+
+    Abrir primero el WebSocket evita perder un cambio que ocurra entre el snapshot y la suscripción.
+paths:
+  /api/aforo:
+    get:
+      summary: Snapshot de aforo de todos los campus
+      operationId: obtenerAforoGeneral
+      tags: [Aforo]
+      responses:
+        '200':
+          description: "Estado actual de todos los campus. Se responde con `Cache-Control: no-store`."
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [generado_en, campus]
+                properties:
+                  generado_en:
+                    type: string
+                    format: date-time
+                  campus:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CampusResumen'
+  /api/aforo/campus/{campus_id}:
+    get:
+      summary: Snapshot de aforo de un campus
+      operationId: obtenerAforoCampus
+      tags: [Aforo]
+      parameters:
+        - $ref: '#/components/parameters/CampusId'
+      responses:
+        '200':
+          description: "Estado actual del campus. Se responde con `Cache-Control: no-store`."
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required: [generado_en]
+                    properties:
+                      generado_en:
+                        type: string
+                        format: date-time
+                  - $ref: '#/components/schemas/CampusResumen'
+        '404':
+          description: El campus no existe.
+  /api/aforo/campus/{campus_id}/zonas/{zona_id}:
+    get:
+      summary: Snapshot de aforo de una zona
+      operationId: obtenerAforoZona
+      tags: [Aforo]
+      parameters:
+        - $ref: '#/components/parameters/CampusId'
+        - name: zona_id
+          in: path
+          required: true
+          description: Código de la zona (`parking_lot_id`).
+          schema:
+            type: string
+            example: ITM-CAMPUS1-EST-NORTE
+      responses:
+        '200':
+          description: "Estado actual de la zona. Se responde con `Cache-Control: no-store`."
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required: [generado_en, campus]
+                    properties:
+                      generado_en:
+                        type: string
+                        format: date-time
+                      campus:
+                        type: string
+                        example: ITM-CAMPUS1
+                  - $ref: '#/components/schemas/ZonaSnapshot'
+        '404':
+          description: La zona no pertenece al campus, el campus no existe o la zona todavía no tiene datos.
+components:
+  parameters:
+    CampusId:
+      name: campus_id
+      in: path
+      required: true
+      description: Código del campus.
+      schema:
+        type: string
+        example: ITM-CAMPUS1
+  schemas:
+    CampusResumen:
+      type: object
+      required: [campus, totales, zonas]
+      properties:
+        campus:
+          type: string
+          example: ITM-CAMPUS1
+        totales:
+          type: object
+          description: Suma de las métricas de las zonas del campus.
+          required: [total_slots, free, occupied, in_maneuver, occupancy_ratio]
+          properties:
+            total_slots: {type: integer, example: 120}
+            free: {type: integer, example: 37}
+            occupied: {type: integer, example: 80}
+            in_maneuver: {type: integer, example: 3}
+            occupancy_ratio: {type: number, example: 0.6667}
+        zonas:
+          type: array
+          items:
+            $ref: '#/components/schemas/ZonaSnapshot'
+    ZonaSnapshot:
+      type: object
+      required: [parking_lot_id, metrics, polygons]
+      properties:
+        parking_lot_id:
+          type: string
+          example: ITM-CAMPUS1-EST-NORTE
+        metrics:
+          $ref: '#/components/schemas/Metricas'
+        polygons:
+          type: array
+          items:
+            $ref: '#/components/schemas/PolygonSnapshot'
+    Metricas:
+      type: object
+      description: Mismas métricas que viajan en `metrics` de los eventos WebSocket.
+      properties:
+        total_slots: {type: integer}
+        free: {type: integer}
+        occupied: {type: integer}
+        in_maneuver: {type: integer}
+        locked_slots: {type: integer}
+        barrier_net_vehicles: {type: integer}
+        occupancy_ratio: {type: number}
+        high_occupancy_alert: {type: boolean}
+    PolygonSnapshot:
+      type: object
+      required: [polygon_id, slot_name, state, manual_lock, updated_at]
+      properties:
+        polygon_id: {type: string, example: poly-itm-a01}
+        slot_name: {type: string, example: A-01}
+        state:
+          type: string
+          enum: [Libre, Ocupado, En maniobra, Reservado, Obras, Emergencia]
+        confidence: {type: number, example: 0.96}
+        iou_ratio: {type: number, example: 0.04}
+        vehicle_type:
+          type: string
+          nullable: true
+          example: car
+        manual_lock:
+          type: boolean
+          description: El estado fue forzado manualmente y la cámara no lo sobrescribe (RF-03).
+        updated_at:
+          type: string
+          format: date-time

@@ -21,6 +21,11 @@ class ParkingSlotRecord:
     camera_id: str
     frame_sequence: int
     updated_at: datetime
+    zone_id: Optional[str] = None
+    last_latency_ms: Optional[float] = None
+    manual_lock: bool = False
+    lock_reason: Optional[str] = None
+    locked_by: Optional[int] = None
 
 
 @dataclass

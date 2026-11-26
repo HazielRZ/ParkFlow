@@ -19,10 +19,12 @@ import { ParkingGrid } from "../components/ParkingGrid.jsx";
 import { ZoneSchematicMap } from "../components/ZoneSchematicMap.jsx";
 import { SpotGuidanceView } from "../components/SpotGuidanceView.jsx";
 import { DemoBottomSheet } from "../components/DemoBottomSheet.jsx";
+import { AnalyticsReportsView } from "../components/AnalyticsReportsView.jsx";
 import {
   AlertTriangleIcon,
   ArrowLeftIcon,
   ArrowRightIcon,
+  BarChart3Icon,
   CheckCircleIcon,
   ClockIcon,
   LayoutGridIcon,
@@ -388,7 +390,9 @@ export function DashboardView({ wsUrl }) {
   };
 
   const showGuidanceScreen = activeView === "guidance" && Boolean(assignment);
-  const isCroquisActive = !showGuidanceScreen && selectedZoneId !== null;
+  const showReportsScreen = activeView === "reports";
+  const isCroquisActive =
+    !showGuidanceScreen && !showReportsScreen && selectedZoneId !== null;
 
   // Cálculos del anillo radial y barra segmentada para el Hero de ocupación
   const totalSlots = Math.max(1, activeLotMetrics.total_slots || 0);
@@ -412,7 +416,7 @@ export function DashboardView({ wsUrl }) {
       {/* Header curvo institucional (#1B396A -> #132A4F, border-bottom-radius: 28px) */}
       <header
         className="pf-hero-header"
-        data-compact={String(showGuidanceScreen)}
+        data-compact={String(showGuidanceScreen || showReportsScreen)}
       >
         <div className="pf-header-top">
           <div className="pf-brand">
@@ -442,6 +446,22 @@ export function DashboardView({ wsUrl }) {
             <button
               type="button"
               className="pf-theme-toggle"
+              onClick={() => {
+                stopVoiceState();
+                setActiveView((prev) =>
+                  prev === "reports" ? "explore" : "reports"
+                );
+              }}
+              aria-pressed={showReportsScreen}
+              aria-label="Abrir reportes analíticos"
+              title="Reportes analíticos PDF/CSV"
+            >
+              <BarChart3Icon size={17} />
+            </button>
+
+            <button
+              type="button"
+              className="pf-theme-toggle"
               onClick={toggleTheme}
               aria-label="Alternar tema claro u oscuro"
               title={
@@ -457,7 +477,7 @@ export function DashboardView({ wsUrl }) {
           </div>
         </div>
 
-        {!showGuidanceScreen && (
+        {!showGuidanceScreen && !showReportsScreen && (
           <>
             <div className="pf-header-headline-row">
               <h2 className="pf-hero-headline">
@@ -532,7 +552,9 @@ export function DashboardView({ wsUrl }) {
       </header>
 
       <div className="pf-content">
-        {showGuidanceScreen ? (
+        {showReportsScreen ? (
+          <AnalyticsReportsView onBack={() => setActiveView("explore")} />
+        ) : showGuidanceScreen ? (
           <SpotGuidanceView
             assignment={assignment}
             assignedLot={assignedLot}

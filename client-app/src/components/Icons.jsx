@@ -291,6 +291,17 @@ export function SparklesIcon(props) {
   );
 }
 
+export function BarChart3Icon(props) {
+  return (
+    <SvgIcon {...props}>
+      <path d="M3 3v18h18" />
+      <path d="M18 17V9" />
+      <path d="M13 17V5" />
+      <path d="M8 17v-3" />
+    </SvgIcon>
+  );
+}
+
 /**
  * Vista cenital arquitectónica de automóvil para cajones ocupados en el croquis.
  * Orientada hacia el carril central (`facing="right"` en Bloque A, `"left"` en Bloque B).
