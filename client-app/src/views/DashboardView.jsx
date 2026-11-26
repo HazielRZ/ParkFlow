@@ -16,6 +16,7 @@ import {
 import { ParkingGrid } from "../components/ParkingGrid.jsx";
 import { ZoneSchematicMap } from "../components/ZoneSchematicMap.jsx";
 import { SpotGuidanceView } from "../components/SpotGuidanceView.jsx";
+import { AnalyticsReportsView } from "../components/AnalyticsReportsView.jsx";
 import { useParkingSocket } from "../hooks/useParkingSocket.js";
 import { useParkingAssignment } from "../hooks/useParkingAssignment.js";
 import { getEligibleLots } from "../utils/assignmentLogic.js";
@@ -382,6 +383,16 @@ export function DashboardView({ wsUrl }) {
             <button
               type="button"
               className="pf-theme-toggle"
+              onClick={() => setActiveView((prev) => (prev === "reports" ? "explore" : "reports"))}
+              aria-label="Abrir reportes analíticos"
+              title="Reportes analíticos PDF/CSV"
+              >
+              📊
+            </button>
+
+            <button
+              type="button"
+              className="pf-theme-toggle"
               onClick={toggleTheme}
               aria-label="Alternar tema claro u oscuro"
               title={
@@ -397,7 +408,9 @@ export function DashboardView({ wsUrl }) {
       </header>
 
       <div className="pf-content">
-        {showGuidanceScreen ? (
+        {activeView === "reports" ? (
+          <AnalyticsReportsView onBack={() => setActiveView("explore")} />
+          ) : showGuidanceScreen ? (
           <SpotGuidanceView
             assignment={assignment}
             assignedLot={assignedLot}

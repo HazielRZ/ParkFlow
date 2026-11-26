@@ -13,6 +13,8 @@ from src.api.aforo_routes import build_aforo_router
 from src.api.auth_routes import build_auth_router
 from src.api.calibration_routes import build_calibration_router
 from src.api.inference_routes import build_inference_router
+from src.api.analytics_routes import build_analytics_router
+from src.services.analytics_service import AnalyticsService
 from src.models.campus import campus_configurados
 from src.services.aforo_service import AforoService
 from src.services.audit_service import auditoria_service
@@ -52,6 +54,7 @@ def create_app(schema_path: Optional[Path] = None) -> FastAPI:
     state_service = ParkingStateService(ws_gateway=ws_gateway, auditoria=auditoria_service)
     calibracion_service = CalibracionService()
     aforo_service = AforoService(state_service=state_service, campus_conocidos=campus)
+    analytics_service = AnalyticsService(state_service=state_service)
     # Expuestos para inspección en pruebas de integración.
     app.state.parking_state_service = state_service
     app.state.calibracion_service = calibracion_service
@@ -68,6 +71,7 @@ def create_app(schema_path: Optional[Path] = None) -> FastAPI:
     )
     app.include_router(build_access_router(state_service=state_service))
     app.include_router(build_aforo_router(aforo_service=aforo_service, manager=ws_gateway))
+    app.include_router(build_analytics_router(analytics_service=analytics_service))
 
     @app.get("/health", tags=["System"])
     async def health_check() -> dict[str, str]:
